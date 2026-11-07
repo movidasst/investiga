@@ -20,8 +20,8 @@ const casos = {
     ],
     final: 'Atrapamiento y lesión de mano',
     relaciones: [
-      { destino: 'H04', origen: ['H02','H03'], tipo: 'conjuncion', ayuda: 'El registro del motor y el video permiten analizar juntos el movimiento y el acceso al rodillo.' },
-      { destino: 'final', origen: ['H04'], tipo: 'cadena', ayuda: 'El video y el parte permiten vincular el contacto con la lesión documentada.' }
+      { destino: 'H04', fuentes: [0, 1], origen: ['H02','H03'], tipo: 'conjuncion', ayuda: 'El registro del motor y el video permiten analizar juntos el movimiento y el acceso al rodillo.' },
+      { destino: 'final', fuentes: [1, 2], origen: ['H04'], tipo: 'cadena', ayuda: 'El video y el parte permiten vincular el contacto con la lesión documentada.' }
     ],
     medidas: [
       ['Interbloquear el resguardo', 'Acceso y movimiento', 'Realizar y documentar una prueba funcional de apertura y parada.'],
@@ -55,8 +55,8 @@ const casos = {
     ],
     final: 'Atropello por el camión A',
     relaciones: [
-      { destino: 'H02', origen: ['H01'], tipo: 'cadena', ayuda: 'El desplazamiento del camión A permitió que alcanzara al camión B.' },
-      { destino: 'final', origen: [], tipo: 'pendiente', ayuda: 'El relato documenta el atropello. El papel exacto del choque y la posición del trabajador al contacto quedan por aclarar.' }
+      { destino: 'H02', fuentes: [0, 1], origen: ['H01'], tipo: 'cadena', ayuda: 'El desplazamiento del camión A permitió que alcanzara al camión B.' },
+      { destino: 'final', fuentes: [1, 2], origen: [], tipo: 'pendiente', ayuda: 'El relato documenta el atropello. El papel exacto del choque y la posición del trabajador al contacto quedan por aclarar.' }
     ],
     medidas: [
       ['Eliminar la pendiente en la zona de carga', 'Condición del terreno', 'Verificar el diseño y la nivelación de la zona intervenida.'],

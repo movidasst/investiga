@@ -10,7 +10,7 @@ const indicaciones = [
     'Abre «Consultar evidencia» y clasifica cada afirmación. Elige «Hecho respaldado» si la fuente la sostiene, «Hipótesis pendiente» si hace falta comprobarla o «Juicio de valor» si atribuye una intención o califica a alguien sin sustento.',
     'Puedes continuar cuando todas las afirmaciones estén clasificadas correctamente. Si hace falta, revisa la devolución y cambia tu respuesta.'],
   ['Reconstruye cómo se produjo el daño.',
-    'Empieza por el hecho final. En cada tarjeta, marca los antecedentes respaldados, elige el tipo de vínculo y pulsa «Comprobar vínculo». Las flechas muestran el vínculo desde el antecedente hacia su consecuencia.',
+    'Empieza por el hecho final. En cada tarjeta, marca los antecedentes respaldados, elige el tipo de vínculo y pulsa «Comprobar vínculo». Revisa el árbol conforme crece y abre las fuentes de cada vínculo. Si dejas una rama abierta, anota qué falta verificar y cómo lo investigarías.',
     'Puedes continuar cuando hayas comprobado todos los vínculos. Una rama abierta comprobada también cuenta.'],
   ['Decide qué investigarías después y qué incluirías en tu plan preventivo.',
     'Primero elige una diligencia y lee qué aportaría. Después selecciona las medidas que incluirías y revisa sobre qué condición actúa cada una y cómo se verificaría.',
@@ -150,22 +150,47 @@ function hechos() {
     }).join('')}</div>`;
 }
 
+function escapar(texto = '') {
+  return texto.replace(/[&<>"']/g, caracter => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[caracter]);
+}
+
+function nodoArbol(destino) {
+  const guardada = avance.relaciones[destino];
+  const relacion = caso.relaciones.find(r => r.destino === destino);
+  return `<div class="subarbol">
+    <div class="nodo ${destino === 'final' ? 'final' : ''}">
+      ${destino === 'final' ? '<small>HECHO FINAL</small>' : ''}<strong>${nombre(destino)}</strong>
+    </div>
+    ${guardada ? `<div class="vinculo-arbol">
+      <details><summary>↑ ${vinculos[guardada.tipo]} · Consultar fuentes</summary>
+        <p>${relacion.ayuda}</p>
+        <ul>${relacion.fuentes.map(i => {
+          const e = caso.evidencias[i];
+          return `<li><strong>${e.tipo} · ${e.titulo}</strong><br>${e.texto}</li>`;
+        }).join('')}</ul>
+      </details>
+    </div>${guardada.tipo === 'pendiente'
+      ? `<div class="nodo abierto"><strong>Por verificar</strong>
+          ${guardada.pendiente ? `<p>${escapar(guardada.pendiente)}</p><strong>Cómo investigarlo</strong><p>${escapar(guardada.diligencia)}</p>` : '<p>Agrega una nota de investigación al comprobar esta rama.</p>'}</div>`
+      : `<div class="hijos-arbol">${guardada.origen.map(nodoArbol).join('')}</div>`}` : ''}
+  </div>`;
+}
+
 function arbolVisual() {
-  const ramas = caso.relaciones.filter(r => avance.relaciones[r.destino]);
-  return `<div class="arbol" aria-label="Árbol construido">${ramas.map(r => {
-    const guardada = avance.relaciones[r.destino];
-    if (guardada.tipo === 'pendiente') {
-      return `<div class="rama"><span class="nodo abierto">Antecedentes por verificar</span><span class="flecha">⇢ <small>Rama abierta</small></span><span class="nodo final">${nombre(r.destino)}</span></div>`;
-    }
-    return `<div class="rama"><div class="antecedentes">${guardada.origen.map(h => {
-      const dato = caso.hechos.find(f => f[0] === h);
-      return `<details class="nodo"><summary>${nombre(h)}</summary><p>${caso.evidencias[dato[4]].texto}</p></details>`;
-    }).join('')}</div><span class="flecha">→ <small>${vinculos[guardada.tipo]}</small></span><span class="nodo ${r.destino === 'final' ? 'final' : ''}">${nombre(r.destino)}</span></div>`;
-  }).join('') || '<p>Las conexiones aceptadas aparecerán aquí.</p>'}</div>`;
+  const registrados = Object.entries(avance.relaciones);
+  const antecedentes = new Set(registrados.flatMap(([, r]) => r.origen));
+  const separados = registrados.filter(([destino]) => destino !== 'final' && !antecedentes.has(destino));
+  return `<section class="arbol" aria-label="Árbol construido">
+    <h3>Árbol de la investigación</h3>
+    <p>Parte del hecho final y baja hacia los antecedentes. Las flechas apuntan hacia la consecuencia.</p>
+    ${nodoArbol('final')}
+    ${separados.length ? `<div class="ramas-separadas"><h4>Vínculos comprobados sin conexión al hecho final</h4>
+      ${separados.map(([destino]) => nodoArbol(destino)).join('')}</div>` : ''}
+  </section>`;
 }
 
 function arbol() {
-  return `<p class="nota"><strong>Hecho final.</strong> ${caso.final}</p>
+  return `${arbolVisual()}
     ${[...caso.relaciones].reverse().map(r => {
       const previa = avance.relaciones[r.destino];
       return `<form class="tarjeta bloque" data-relacion="${r.destino}"><h3>${nombre(r.destino)}</h3>
@@ -174,10 +199,15 @@ function arbol() {
             `<label><input type="checkbox" name="origen" value="${clave}" ${previa?.origen.includes(clave) ? 'checked' : ''}> ${frase}</label>`).join('')}</fieldset>
         <label>Tipo de relación <select name="tipo" required><option value="">Selecciona una relación</option>
         ${Object.entries(vinculos).map(([v,t]) => `<option value="${v}" ${previa?.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-        <small>Si eliges rama abierta, deja los antecedentes sin marcar.</small>
+        <small>Si eliges rama abierta, deja los antecedentes sin marcar y completa la nota de investigación.</small>
+        <fieldset data-nota-rama ${previa?.tipo === 'pendiente' ? '' : 'hidden'}>
+          <legend>Nota de investigación</legend>
+          <label>¿Qué falta verificar?<textarea name="pendiente" maxlength="400" rows="2">${escapar(previa?.pendiente)}</textarea></label>
+          <label>¿Cómo lo investigarías?<textarea name="diligencia" maxlength="400" rows="2">${escapar(previa?.diligencia)}</textarea></label>
+        </fieldset>
         <button type="submit">Comprobar vínculo</button>
         <p class="devolucion" aria-live="polite">${previa ? 'Vínculo registrado. ' + r.ayuda : ''}</p></form>`;
-    }).join('')}${arbolVisual()}`;
+    }).join('')}`;
 }
 
 function decision() {
@@ -260,7 +290,7 @@ function bloqueo() {
       if (avance.vistas.length < caso.evidencias.length) return 'Abre los puntos de investigación que faltan.';
       return retosResueltos() < Object.keys(caso.observaciones).length ? 'Resuelve los retos pendientes. Busca «Reto de observación» en los puntos de investigación.' : '';
     case 1: return caso.hechos.some(([clave, , correcta]) => avance.hechos[clave] !== correcta) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
-    case 2: return caso.relaciones.some(r => !avance.relaciones[r.destino]) ? 'Comprueba todas las relaciones del árbol.' : '';
+    case 2: return caso.relaciones.some(r => !avance.relaciones[r.destino] || (r.tipo === 'pendiente' && !avance.relaciones[r.destino].diligencia)) ? 'Comprueba todas las relaciones del árbol.' : '';
     case 3:
       if (avance.decision === null) return 'Elige una diligencia de investigación.';
       return avance.medidas.length === 0 ? 'Elige al menos una medida para tu plan.' : '';
@@ -315,6 +345,12 @@ app.addEventListener('click', evento => {
   app.querySelector(selector)?.focus();
 });
 
+app.addEventListener('change', evento => {
+  const selector = evento.target;
+  if (!selector.matches('form[data-relacion] select[name="tipo"]')) return;
+  selector.form.querySelector('[data-nota-rama]').hidden = selector.value !== 'pendiente';
+});
+
 app.addEventListener('submit', evento => {
   evento.preventDefault();
   const formulario = evento.target;
@@ -324,7 +360,13 @@ app.addEventListener('submit', evento => {
   const origen = datos.getAll('origen');
   const tipo = datos.get('tipo');
   const valido = tipo === relacion.tipo && origen.length === relacion.origen.length && origen.every(h => relacion.origen.includes(h));
-  if (valido) avance.relaciones[destino] = { tipo, origen };
+  const pendiente = datos.get('pendiente')?.trim();
+  const diligencia = datos.get('diligencia')?.trim();
+  if (valido && tipo === 'pendiente' && (!pendiente || !diligencia)) {
+    formulario.querySelector('.devolucion').textContent = 'Completa qué falta verificar y cómo lo investigarías.';
+    return;
+  }
+  if (valido) avance.relaciones[destino] = tipo === 'pendiente' ? { tipo, origen, pendiente, diligencia } : { tipo, origen };
   else delete avance.relaciones[destino];
   guardar();
   formulario.querySelector('.devolucion').textContent = (valido ? 'Vínculo registrado. ' : 'Revisa tu conexión. ') + relacion.ayuda;

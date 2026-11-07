@@ -92,3 +92,13 @@ footer{padding:1rem;text-align:center;font-size:.85rem;color:#405971;border-top:
 .guia-vinculos dt{font-weight:700;margin-top:.5rem}
 .guia-vinculos dd{margin:0}
 @media print{.instrucciones{display:none}}
+.subarbol{display:grid;justify-items:stretch;min-width:0;text-align:center}
+.subarbol .nodo{display:block;margin:0 auto;width:min(100%,36rem);overflow-wrap:anywhere}
+.subarbol .nodo small{display:block}
+.subarbol .nodo p{white-space:pre-wrap}
+.vinculo-arbol{display:grid;justify-items:center;padding:.4rem 0}
+.vinculo-arbol details{max-width:100%;margin:0}
+.vinculo-arbol details[open]{text-align:start}
+.hijos-arbol{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.65rem}
+.ramas-separadas{border-top:1px solid var(--borde);padding-top:.5rem}
+[data-nota-rama] textarea{display:block;width:100%;font:inherit;padding:.4rem;box-sizing:border-box}
