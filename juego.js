@@ -13,8 +13,8 @@ const indicaciones = [
     'Empieza por el hecho final. En cada tarjeta, marca los antecedentes respaldados, elige el tipo de vínculo y pulsa «Comprobar vínculo». Revisa el árbol conforme crece y abre las fuentes de cada vínculo. Si dejas una rama abierta, anota qué falta verificar y cómo lo investigarías.',
     'Puedes continuar cuando hayas comprobado todos los vínculos. Una rama abierta comprobada también cuenta.'],
   ['Decide qué investigarías después y qué incluirías en tu plan preventivo.',
-    'Primero elige una diligencia y lee qué aportaría. Después selecciona las medidas que incluirías y revisa sobre qué condición actúa cada una y cómo se verificaría.',
-    'Puedes continuar cuando hayas elegido una diligencia y al menos una medida.'],
+    'Primero elige una diligencia y lee qué aportaría. Después selecciona las medidas que incluirías. Para cada una, elige el hallazgo que aborda y cómo verificarías su aplicación.',
+    'Puedes continuar cuando hayas elegido una diligencia, incluido al menos una medida y completado su sustento.'],
   ['Revisa el resultado de tu investigación y prepárate para explicarlo.',
     'Recorre tu árbol y tu plan preventivo. Usa la pregunta final para preparar la discusión en clase.',
     'La misión termina aquí. Puedes imprimir tu ficha o abrir otro expediente.']
@@ -38,23 +38,33 @@ function guardar() {
 }
 
 function nuevoAvance() {
-  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {} };
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {}, sustentoMedidas: {} };
 }
 
 function retosResueltos() {
   return Object.entries(caso.observaciones).filter(([indice, reto]) => avance.observaciones[indice] === reto.correcta).length;
 }
 
+function medidaSustentada(i) {
+  const sustento = avance.sustentoMedidas[i];
+  return caso.medidas[i][3] !== false && sustento?.hallazgo === i && sustento?.verificacion === i;
+}
+
+function insigniaObtenida() {
+  return avance.decision === 0 && !vinculoPendiente() &&
+    avance.medidas.length > 0 && avance.medidas.every(medidaSustentada);
+}
+
 function puntaje() {
   const aciertos = caso.hechos.filter(([clave, , correcta]) => avance.hechos[clave] === correcta).length;
-  const medidasValidas = avance.medidas.filter(i => id !== 'banda' || i !== 2).length;
-  const totalMedidas = id === 'banda' ? 2 : caso.medidas.length;
+  const medidasSustentadas = avance.medidas.filter(medidaSustentada).length;
+  const totalMedidas = caso.medidas.filter(m => m[3] !== false).length;
   return [
     ['Evidencias', Math.round(12 * avance.vistas.length / caso.evidencias.length + 8 * retosResueltos() / Object.keys(caso.observaciones).length), 20],
     ['Hechos', Math.round(25 * aciertos / caso.hechos.length), 25],
     ['Árbol', Math.round(30 * Object.keys(avance.relaciones).length / caso.relaciones.length), 30],
     ['Decisión', avance.decision === 0 ? 15 : 0, 15],
-    ['Prevención', Math.round(10 * medidasValidas / totalMedidas), 10]
+    ['Prevención', Math.round(10 * medidasSustentadas / Math.max(totalMedidas, avance.medidas.length)), 10]
   ];
 }
 
@@ -219,11 +229,27 @@ function decision() {
   </article>`;
 }
 
+function sustentoMedida(i) {
+  const sustento = avance.sustentoMedidas[i] || {};
+  const selector = (campo, etiqueta, columna) => `<label>${etiqueta}
+    <select data-sustento="${i}" data-campo="${campo}">
+      <option value="">Selecciona una opción</option>
+      ${caso.medidas.map((medida, j) => medida[3] === false ? '' :
+        `<option value="${j}" ${sustento[campo] === j ? 'selected' : ''}>${medida[columna]}</option>`).join('')}
+    </select></label>`;
+  return `${selector('hallazgo', '¿Qué hallazgo aborda?', 1)}
+    ${selector('verificacion', '¿Cómo comprobarías su aplicación?', 2)}
+    <p class="devolucion" role="status">${medidaSustentada(i) ? 'Medida sustentada.' :
+      [sustento.hallazgo, sustento.verificacion].every(Number.isInteger)
+        ? 'Revisa si el hallazgo y la verificación elegidos corresponden a esta medida.' : ''}</p>`;
+}
+
 function medidas() {
   return `${decision()}<h3>Tu plan preventivo</h3>
-    <div class="lista">${caso.medidas.map(([titulo, rama, verificacion], i) => `<article class="tarjeta bloque">
-    <p class="eyebrow">${rama}</p><h3>${titulo}</h3><button class="secundario" data-medida="${i}" aria-pressed="${avance.medidas.includes(i)}">${avance.medidas.includes(i) ? 'Incluida ✓' : 'Incluir en el plan'}</button>
-    <p>${verificacion}</p></article>`).join('')}</div>`;
+    <p>Los XP de prevención se asignan a las medidas vinculadas con un hallazgo y una verificación pertinente. La insignia requiere el árbol comprobado, la diligencia mejor sustentada y todas las medidas incluidas con su sustento.</p>
+    <div class="lista">${caso.medidas.map(([titulo, , verificacion, pertinente], i) => `<article class="tarjeta bloque">
+    <h3>${titulo}</h3><button class="secundario" data-medida="${i}" aria-pressed="${avance.medidas.includes(i)}">${avance.medidas.includes(i) ? 'Incluida ✓' : 'Incluir en el plan'}</button>
+    ${avance.medidas.includes(i) ? (pertinente === false ? `<p class="devolucion">${verificacion} Retírala si tu plan busca abordar únicamente hallazgos específicos.</p>` : sustentoMedida(i)) : ''}</article>`).join('')}</div>`;
 }
 
 function cierre() {
@@ -231,10 +257,10 @@ function cierre() {
     ? '¿Qué dato pedirías para aclarar la posición del conductor en el momento del contacto?'
     : '¿Qué evidencia adicional permitiría confirmar si el aislamiento se ejecutó y se verificó?';
   return `<p class="nota"><strong>Expediente completado.</strong> ${caso.cierre}</p>
-    ${avance.decision === 0 ? `<p class="insignia">★ Insignia obtenida · ${caso.mision.insignia}</p>` : '<p class="nota">Puedes volver a la decisión de campo y contrastar otra diligencia.</p>'}
+    ${insigniaObtenida() ? `<p class="insignia">★ Insignia obtenida · ${caso.mision.insignia}</p>` : '<p class="nota">Para obtener la insignia, comprueba el árbol, selecciona la diligencia mejor sustentada y revisa el hallazgo y la verificación de cada medida incluida.</p>'}
     ${avance.decision !== null ? `<p><strong>Decisión de campo.</strong> ${caso.mision.opciones[avance.decision][0]}. ${caso.mision.opciones[avance.decision][1]}</p>` : ''}
     <h2>Tu árbol de causas</h2>${arbolVisual()}
-    <h2>Plan preventivo</h2><ul>${avance.medidas.map(i => `<li><strong>${caso.medidas[i][0]}</strong>. ${caso.medidas[i][2]}</li>`).join('')}</ul>
+    <h2>Plan preventivo</h2><ul>${avance.medidas.map(i => `<li><strong>${caso.medidas[i][0]}</strong>. ${medidaSustentada(i) ? `Hallazgo: ${caso.medidas[i][1]}. Verificación: ${caso.medidas[i][2]}` : 'Sustento pendiente de revisar.'}</li>`).join('')}</ul>
     <p class="nota"><strong>Para debatir en clase.</strong> ${pregunta}</p>
     ${caso.fuente ? `<p><a href="${caso.fuente}" target="_blank" rel="noopener">Ver la figura 7 y la investigación original de ORP 2019 ↗</a></p>` : ''}
     <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div><details class="reinicio"><summary>Volver a jugar este expediente</summary><p>Se borrará el avance guardado de este caso.</p><button class="secundario" data-reiniciar>Reiniciar expediente</button></details>`;
@@ -298,7 +324,10 @@ function bloqueo() {
     case 2: return vinculoPendiente() ? 'Queda un vínculo por comprobar.' : '';
     case 3:
       if (avance.decision === null) return 'Elige una diligencia de investigación.';
-      return avance.medidas.length === 0 ? 'Elige al menos una medida para tu plan.' : '';
+      if (avance.medidas.length === 0) return 'Elige al menos una medida para tu plan.';
+      return avance.medidas.some(i => caso.medidas[i][3] !== false &&
+        ![avance.sustentoMedidas[i]?.hallazgo, avance.sustentoMedidas[i]?.verificacion].every(Number.isInteger))
+        ? 'Completa el hallazgo y la verificación de las medidas incluidas.' : '';
     default: return '';
   }
 }
@@ -357,6 +386,17 @@ app.addEventListener('click', evento => {
 
 app.addEventListener('change', evento => {
   const selector = evento.target;
+  if (selector.matches('select[data-sustento]')) {
+    const { sustento, campo } = selector.dataset;
+    const valores = avance.sustentoMedidas[sustento] ||= {};
+    if (selector.value === '') delete valores[campo];
+    else valores[campo] = Number(selector.value);
+    mensaje = '';
+    guardar();
+    pintar();
+    app.querySelector(`[data-sustento="${sustento}"][data-campo="${campo}"]`).focus();
+    return;
+  }
   if (!selector.matches('form[data-relacion] select[name="tipo"]')) return;
   selector.form.querySelector('[data-nota-rama]').hidden = selector.value !== 'pendiente';
 });

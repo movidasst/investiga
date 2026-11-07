@@ -24,9 +24,9 @@ const casos = {
       { destino: 'final', fuentes: [1, 2], origen: ['H04'], tipo: 'cadena', ayuda: 'El video y el parte permiten vincular el contacto con la lesión documentada.' }
     ],
     medidas: [
-      ['Interbloquear el resguardo', 'Acceso y movimiento', 'Realizar y documentar una prueba funcional de apertura y parada.'],
-      ['Verificar el aislamiento antes de intervenir', 'Energía durante la intervención', 'Observar una intervención y comprobar el registro de la verificación.'],
-      ['Emitir un recordatorio general', 'Comunicación', 'El recordatorio por sí solo deja abiertas las ramas de acceso y energía.']
+      ['Interbloquear el resguardo', 'El resguardo estaba abierto antes del contacto (H03)', 'Realizar y documentar una prueba funcional de apertura y parada.'],
+      ['Verificar el aislamiento antes de intervenir', 'El motor permaneció energizado durante la intervención (H02)', 'Observar una intervención y comprobar el registro de la verificación.'],
+      ['Emitir un recordatorio general', 'Sin hallazgo específico respaldado', 'El recordatorio por sí solo deja abiertas las ramas de acceso y energía.', false]
     ],
     cierre: 'Árbol de referencia del demo: H02 y H03 convergen en H04. El contacto con el rodillo en movimiento antecede al atrapamiento y a la lesión.'
   },
@@ -59,9 +59,9 @@ const casos = {
       { destino: 'final', fuentes: [1, 2], origen: [], tipo: 'pendiente', ayuda: 'El relato documenta el atropello. El papel exacto del choque y la posición del trabajador al contacto quedan por aclarar.' }
     ],
     medidas: [
-      ['Eliminar la pendiente en la zona de carga', 'Condición del terreno', 'Verificar el diseño y la nivelación de la zona intervenida.'],
-      ['Evaluar mandos de carga accesibles desde la cabina', 'Descenso durante la carga', 'Comprobar con una prueba de operación que el conductor puede completar la carga desde el vehículo.'],
-      ['Dar formación específica para la carga en silos', 'Práctica de trabajo', 'Verificar la aplicación del procedimiento mediante una demostración práctica.']
+      ['Eliminar la pendiente en la zona de carga', 'La plaza de carga tenía una ligera pendiente (H03)', 'Verificar el diseño y la nivelación de la zona intervenida.'],
+      ['Evaluar mandos de carga accesibles desde la cabina', 'El conductor salió de la cabina para accionar la carga (relato)', 'Comprobar con una prueba de operación que el conductor puede completar la carga desde el vehículo.'],
+      ['Dar formación específica para la carga en silos', 'Los autores reportaron falta de formación específica (documentación preventiva)', 'Verificar la aplicación del procedimiento mediante una demostración práctica.']
     ],
     cierre: 'La figura 7 conecta el desplazamiento y choque con el intento de subir al camión. El texto de la figura califica como probable el papel del choque. Compara esa formulación con la rama que dejaste abierta.'
   }
