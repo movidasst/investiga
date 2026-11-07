@@ -87,3 +87,8 @@ footer{padding:1rem;text-align:center;font-size:.85rem;color:#405971;border-top:
 .visor::backdrop{background:#142c47cf}
 .visor img{aspect-ratio:auto;max-height:72vh;object-fit:contain;margin-top:.6rem}
 .visor p{margin:.6rem 0 0}
+.instrucciones{border:1px solid var(--borde);border-inline-start:.25rem solid var(--teal);border-radius:.65rem;background:#fff;padding:.75rem 1rem;margin:.75rem 0 1rem}
+.instrucciones p{margin:.35rem 0}
+.guia-vinculos dt{font-weight:700;margin-top:.5rem}
+.guia-vinculos dd{margin:0}
+@media print{.instrucciones{display:none}}

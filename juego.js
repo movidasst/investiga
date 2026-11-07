@@ -2,6 +2,24 @@
 const app = document.querySelector('#app');
 const pasos = ['Escena', 'Hechos', 'Árbol', 'Medidas', 'Cierre'];
 const misiones = ['Inspecciona la escena', 'Clasifica los hallazgos', 'Reconstruye el accidente', 'Decide cómo seguir', 'Defiende tu investigación'];
+const indicaciones = [
+  ['Reúne la información del caso.',
+    'Toca cada punto de investigación y lee su ficha. Algunos abren una escena que puedes ampliar. Distingue lo que documenta la ficha de lo que la ilustración recrea.',
+    'Puedes continuar cuando las cuatro evidencias estén marcadas como revisadas.'],
+  ['Decide qué puedes afirmar con la información disponible.',
+    'Abre «Consultar evidencia» y clasifica cada afirmación. Elige «Hecho respaldado» si la fuente la sostiene, «Hipótesis pendiente» si hace falta comprobarla o «Juicio de valor» si atribuye una intención o califica a alguien sin sustento.',
+    'Puedes continuar cuando todas las afirmaciones estén clasificadas correctamente. Si hace falta, revisa la devolución y cambia tu respuesta.'],
+  ['Reconstruye cómo se produjo el daño.',
+    'Empieza por el hecho final. En cada tarjeta, marca los antecedentes respaldados, elige el tipo de vínculo y pulsa «Comprobar vínculo». Las flechas muestran el vínculo desde el antecedente hacia su consecuencia.',
+    'Puedes continuar cuando hayas comprobado todos los vínculos. Una rama abierta comprobada también cuenta.'],
+  ['Decide qué investigarías después y qué incluirías en tu plan preventivo.',
+    'Primero elige una diligencia y lee qué aportaría. Después selecciona las medidas que incluirías y revisa sobre qué condición actúa cada una y cómo se verificaría.',
+    'Puedes continuar cuando hayas elegido una diligencia y al menos una medida.'],
+  ['Revisa el resultado de tu investigación y prepárate para explicarlo.',
+    'Recorre tu árbol y tu plan preventivo. Usa la pregunta final para preparar la discusión en clase.',
+    'La misión termina aquí. Puedes imprimir tu ficha o abrir otro expediente.']
+];
+
 const pistas = [
   'Abre cada punto de investigación y fíjate en el origen de cada dato.',
   'Pregúntate si la fuente describe lo que ocurrió, lo que debía ocurrir o una interpretación.',
@@ -65,6 +83,7 @@ function portada() {
   mostrar(`<section class="hero"><div><p class="eyebrow">LABORATORIO DE INVESTIGACIÓN</p>
     <h1 tabindex="-1">Expediente <em>MAC</em></h1>
     <p class="subtitulo">Juego serio de investigación de accidentes de trabajo</p><p>Explora la escena, contrasta las evidencias y reconstruye el accidente con el Método del Árbol de Causas.</p>
+    <p><strong>Cómo empezar.</strong> Elige un caso. Si es tu primera partida, empieza por «La banda en movimiento». Cada misión te indica qué hacer y cuándo avanzar. Tu progreso se guarda en este navegador.</p>
     <a class="boton" href="#expedientes">Explorar expedientes ↓</a></div>
     <img src="${casos.banda.imagen}" alt="${casos.banda.alt}"></section>
     <section id="expedientes"><p class="eyebrow">SELECCIÓN DE CASOS</p><h2>Tu próxima investigación</h2>
@@ -101,8 +120,7 @@ function escena() {
 }
 
 function hechos() {
-  return `<p>Clasifica cada afirmación. Puedes abrir su evidencia y cambiar tu respuesta.</p>
-    <div class="lista">${caso.hechos.map(([clave, frase, correcta, ayuda, indice]) => {
+  return `<div class="lista">${caso.hechos.map(([clave, frase, correcta, ayuda, indice]) => {
       const elegida = avance.hechos[clave];
       return `<article class="tarjeta bloque"><p class="eyebrow">${clave}</p><h3>${frase}</h3>
         <details><summary>Consultar evidencia</summary><p>${caso.evidencias[indice].texto}</p></details>
@@ -127,8 +145,7 @@ function arbolVisual() {
 }
 
 function arbol() {
-  return `<p>Partimos del daño para buscar sus antecedentes. En el tablero las flechas se leen de antecedente a consecuencia.</p>
-    <p class="nota"><strong>Hecho final.</strong> ${caso.final}</p>
+  return `<p class="nota"><strong>Hecho final.</strong> ${caso.final}</p>
     ${[...caso.relaciones].reverse().map(r => {
       const previa = avance.relaciones[r.destino];
       return `<form class="tarjeta bloque" data-relacion="${r.destino}"><h3>${nombre(r.destino)}</h3>
@@ -153,7 +170,7 @@ function decision() {
 }
 
 function medidas() {
-  return `${decision()}<h3>Tu plan preventivo</h3><p>Selecciona las acciones que incluirías en tu plan. Cada ficha indica la rama donde actuaría y cómo podrías verificarla.</p>
+  return `${decision()}<h3>Tu plan preventivo</h3>
     <div class="lista">${caso.medidas.map(([titulo, rama, verificacion], i) => `<article class="tarjeta bloque">
     <p class="eyebrow">${rama}</p><h3>${titulo}</h3><button class="secundario" data-medida="${i}" aria-pressed="${avance.medidas.includes(i)}">${avance.medidas.includes(i) ? 'Incluida ✓' : 'Incluir en el plan'}</button>
     <p>${verificacion}</p></article>`).join('')}</div>`;
@@ -173,13 +190,35 @@ function cierre() {
     <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div><details class="reinicio"><summary>Volver a jugar este expediente</summary><p>Se borrará el avance guardado de este caso.</p><button class="secundario" data-reiniciar>Reiniciar expediente</button></details>`;
 }
 
+function instrucciones() {
+  const [tarea, como, avanceRequerido] = indicaciones[avance.paso];
+  return `<aside class="instrucciones" aria-label="Indicaciones de la misión">
+    <p><strong>Tu tarea.</strong> ${tarea}</p>
+    <p><strong>Cómo hacerlo.</strong> ${como}</p>
+    <p><strong>${avance.paso === 4 ? 'Para cerrar.' : 'Para avanzar.'}</strong> ${avanceRequerido}</p>
+  </aside>`;
+}
+
+function guiaVinculos() {
+  return `<details class="pista" ${id === 'banda' ? 'open' : ''}>
+    <summary>Cadena, conjunción y rama abierta${id === 'banda' ? ' · Ejemplo guiado' : ''}</summary>
+    <dl class="guia-vinculos">
+      <dt>Cadena</dt><dd>Hay un antecedente directo respaldado para el hecho que estás explicando.</dd>
+      <dt>Conjunción</dt><dd>Varios antecedentes tuvieron que darse juntos para explicar ese hecho.</dd>
+      <dt>Rama abierta</dt><dd>La evidencia disponible deja el vínculo pendiente. En este juego, elige «Rama abierta» y deja los antecedentes sin marcar.</dd>
+    </dl>
+    ${id === 'banda' ? `<p><strong>Ejemplo de práctica ajeno al caso.</strong> Imagina un aula con un proyector que solo funciona cuando está conectado y se pulsa el interruptor. El proyector encendido hizo visible la diapositiva en la pantalla en ese momento (<strong>cadena</strong>). Para que se encendiera, tuvieron que coincidir la conexión eléctrica y el uso del interruptor (<strong>conjunción</strong>). Si la diapositiva aparece y el registro disponible no permite saber qué activó el proyector, ese antecedente queda por verificar (<strong>rama abierta</strong>).</p>` : ''}
+  </details>`;
+}
+
 function pintar() {
   const vistas = [escena, hechos, arbol, medidas, cierre];
   mostrar(`<section class="expediente"><button class="volver" data-portada>← Todos los expedientes</button>
     <p class="eyebrow">EXPEDIENTE ${caso.numero} · ${caso.nivel}</p><h1 tabindex="-1">${caso.titulo}</h1>
     <ol class="progreso" aria-label="Etapas">${pasos.map((nombrePaso, i) => `<li ${i === avance.paso ? 'aria-current="step"' : ''} class="${i < avance.paso ? 'completo' : ''}"><span>${i + 1}</span>${nombrePaso}</li>`).join('')}</ol>
     ${marcador()}<p class="eyebrow">MISIÓN ${avance.paso + 1} DE 5</p>
-    <h2>${misiones[avance.paso]}</h2>
+    <h2>${misiones[avance.paso]}</h2>${instrucciones()}
+    ${avance.paso === 2 ? guiaVinculos() : ''}
     ${avance.paso < 4 ? `<details class="pista"><summary>Ver pista</summary><p>${pistas[avance.paso]}</p></details>` : ''}
     ${vistas[avance.paso]()}
     <p class="aviso" role="status">${mensaje}</p>
