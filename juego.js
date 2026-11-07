@@ -193,20 +193,20 @@ function arbol() {
   return `${arbolVisual()}
     ${[...caso.relaciones].reverse().map(r => {
       const previa = avance.relaciones[r.destino];
-      return `<form class="tarjeta bloque" data-relacion="${r.destino}"><h3>${nombre(r.destino)}</h3>
+      return `<form class="tarjeta bloque" data-relacion="${r.destino}"><h3 tabindex="-1">${nombre(r.destino)}</h3>
+        <p id="devolucion-${r.destino}" class="devolucion" aria-live="polite">${previa ? 'Vínculo registrado. ' + r.ayuda : ''}</p>
         <fieldset><legend>¿Qué tuvo que ocurrir para que se produjera este hecho?</legend>
           ${caso.hechos.filter(([clave]) => clave !== r.destino && avance.hechos[clave] === 'hecho').map(([clave, frase]) =>
-            `<label><input type="checkbox" name="origen" value="${clave}" ${previa?.origen.includes(clave) ? 'checked' : ''}> ${frase}</label>`).join('')}</fieldset>
-        <label>Tipo de relación <select name="tipo" required><option value="">Selecciona una relación</option>
+            `<label><input type="checkbox" name="origen" aria-describedby="devolucion-${r.destino}" value="${clave}" ${previa?.origen.includes(clave) ? 'checked' : ''}> ${frase}</label>`).join('')}</fieldset>
+        <label>Tipo de relación <select name="tipo" aria-describedby="devolucion-${r.destino}"><option value="">Selecciona una relación</option>
         ${Object.entries(vinculos).map(([v,t]) => `<option value="${v}" ${previa?.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <small>Si eliges rama abierta, deja los antecedentes sin marcar y completa la nota de investigación.</small>
         <fieldset data-nota-rama ${previa?.tipo === 'pendiente' ? '' : 'hidden'}>
           <legend>Nota de investigación</legend>
-          <label>¿Qué falta verificar?<textarea name="pendiente" maxlength="400" rows="2">${escapar(previa?.pendiente)}</textarea></label>
-          <label>¿Cómo lo investigarías?<textarea name="diligencia" maxlength="400" rows="2">${escapar(previa?.diligencia)}</textarea></label>
+          <label>¿Qué falta verificar?<textarea aria-describedby="devolucion-${r.destino}" name="pendiente" maxlength="400" rows="2">${escapar(previa?.pendiente)}</textarea></label>
+          <label>¿Cómo lo investigarías?<textarea aria-describedby="devolucion-${r.destino}" name="diligencia" maxlength="400" rows="2">${escapar(previa?.diligencia)}</textarea></label>
         </fieldset>
-        <button type="submit">Comprobar vínculo</button>
-        <p class="devolucion" aria-live="polite">${previa ? 'Vínculo registrado. ' + r.ayuda : ''}</p></form>`;
+        <button type="submit">Comprobar vínculo</button></form>`;
     }).join('')}`;
 }
 
@@ -284,13 +284,18 @@ function ir(paso) {
   enfocarTitulo();
 }
 
+function vinculoPendiente() {
+  return caso.relaciones.slice().reverse().find(r =>
+    !avance.relaciones[r.destino] || (r.tipo === 'pendiente' && !avance.relaciones[r.destino].diligencia));
+}
+
 function bloqueo() {
   switch (avance.paso) {
     case 0:
       if (avance.vistas.length < caso.evidencias.length) return 'Abre los puntos de investigación que faltan.';
       return retosResueltos() < Object.keys(caso.observaciones).length ? 'Resuelve los retos pendientes. Busca «Reto de observación» en los puntos de investigación.' : '';
     case 1: return caso.hechos.some(([clave, , correcta]) => avance.hechos[clave] !== correcta) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
-    case 2: return caso.relaciones.some(r => !avance.relaciones[r.destino] || (r.tipo === 'pendiente' && !avance.relaciones[r.destino].diligencia)) ? 'Comprueba todas las relaciones del árbol.' : '';
+    case 2: return vinculoPendiente() ? 'Queda un vínculo por comprobar.' : '';
     case 3:
       if (avance.decision === null) return 'Elige una diligencia de investigación.';
       return avance.medidas.length === 0 ? 'Elige al menos una medida para tu plan.' : '';
@@ -315,8 +320,13 @@ app.addEventListener('click', evento => {
   if ('atras' in datos) return ir(avance.paso - 1);
   if ('siguiente' in datos) {
     mensaje = bloqueo();
-    if (mensaje) app.querySelector('.aviso').textContent = mensaje;
-    else ir(avance.paso + 1);
+    if (!mensaje) return ir(avance.paso + 1);
+    app.querySelector('.aviso').textContent = mensaje;
+    if (avance.paso === 2) {
+      const tarjeta = app.querySelector(`[data-relacion="${vinculoPendiente().destino}"]`);
+      tarjeta.querySelector('.devolucion').textContent ||= 'Revisa esta tarjeta y pulsa «Comprobar vínculo».';
+      tarjeta.querySelector('h3').focus();
+    }
     return;
   }
   if ('evidencia' in datos) {
@@ -351,6 +361,35 @@ app.addEventListener('change', evento => {
   selector.form.querySelector('[data-nota-rama]').hidden = selector.value !== 'pendiente';
 });
 
+function revisarVinculo(relacion, origen, tipo, pendiente, diligencia) {
+  const faltan = relacion.origen.filter(h => !origen.includes(h)).length;
+  const sobran = origen.filter(h => !relacion.origen.includes(h)).length;
+  if (relacion.tipo === 'pendiente' && sobran) {
+    return ['La información del caso no permite sostener los antecedentes marcados para este vínculo. Revisa si conviene dejarlo pendiente.', '[name="origen"]:checked'];
+  }
+  if (faltan && sobran) {
+    return ['Hay antecedentes que faltan y otros que sobran. Revisa cuáles explican directamente el hecho de esta tarjeta.', '[name="origen"]:checked'];
+  }
+  if (faltan) {
+    return [origen.length ? 'Falta al menos un antecedente. Pregúntate qué otra condición tuvo que darse.' : 'Todavía no marcaste antecedentes. Revisa qué tuvo que ocurrir para que se produjera este hecho.', '[name="origen"]:not(:checked)'];
+  }
+  if (sobran) {
+    return ['Marcaste un antecedente de más. Conserva los que explican este hecho y revisa cuáles solo aportan contexto.', '[name="origen"]:checked'];
+  }
+  if (!tipo) return ['Elige el tipo de vínculo para comprobar la tarjeta.', '[name="tipo"]'];
+  if (tipo !== relacion.tipo) {
+    const pista = {
+      conjuncion: 'Identificaste los antecedentes. Ahora piensa si tuvieron que coincidir para que ocurriera el hecho.',
+      cadena: 'Identificaste un solo antecedente directo. Revisa qué tipo de vínculo representa esa relación.',
+      pendiente: 'Dejaste los antecedentes sin marcar. Elige el tipo de vínculo que mantiene explícita esa incertidumbre.'
+    };
+    return [pista[relacion.tipo], '[name="tipo"]'];
+  }
+  if (tipo === 'pendiente' && !pendiente) return ['Escribe qué dato concreto falta verificar para explicar el vínculo.', '[name="pendiente"]'];
+  if (tipo === 'pendiente' && !diligencia) return ['Indica cómo buscarías ese dato, por ejemplo qué fuente consultarías o qué contrastarías.', '[name="diligencia"]'];
+  return null;
+}
+
 app.addEventListener('submit', evento => {
   evento.preventDefault();
   const formulario = evento.target;
@@ -359,20 +398,17 @@ app.addEventListener('submit', evento => {
   const datos = new FormData(formulario);
   const origen = datos.getAll('origen');
   const tipo = datos.get('tipo');
-  const valido = tipo === relacion.tipo && origen.length === relacion.origen.length && origen.every(h => relacion.origen.includes(h));
   const pendiente = datos.get('pendiente')?.trim();
   const diligencia = datos.get('diligencia')?.trim();
-  if (valido && tipo === 'pendiente' && (!pendiente || !diligencia)) {
-    formulario.querySelector('.devolucion').textContent = 'Completa qué falta verificar y cómo lo investigarías.';
-    return;
-  }
-  if (valido) avance.relaciones[destino] = tipo === 'pendiente' ? { tipo, origen, pendiente, diligencia } : { tipo, origen };
-  else delete avance.relaciones[destino];
+  const error = revisarVinculo(relacion, origen, tipo, pendiente, diligencia);
+  if (error) delete avance.relaciones[destino];
+  else avance.relaciones[destino] = tipo === 'pendiente' ? { tipo, origen, pendiente, diligencia } : { tipo, origen };
   guardar();
-  formulario.querySelector('.devolucion').textContent = (valido ? 'Vínculo registrado. ' : 'Revisa tu conexión. ') + relacion.ayuda;
+  formulario.querySelector('.devolucion').textContent = error ? error[0] : 'Vínculo registrado. ' + relacion.ayuda;
   app.querySelector('.aviso').textContent = '';
   app.querySelector('.arbol').outerHTML = arbolVisual();
   app.querySelector('.marcador').outerHTML = marcador();
+  if (error) (formulario.querySelector(error[1]) || formulario.querySelector('h3')).focus();
 });
 
 portada();
