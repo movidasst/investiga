@@ -102,3 +102,10 @@ footer{padding:1rem;text-align:center;font-size:.85rem;color:#405971;border-top:
 .hijos-arbol{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.65rem}
 .ramas-separadas{border-top:1px solid var(--borde);padding-top:.5rem}
 [data-nota-rama] textarea{display:block;width:100%;font:inherit;padding:.4rem;box-sizing:border-box}
+.defensa textarea{display:block;width:100%;font:inherit;padding:.5rem;margin:.3rem 0 .75rem;box-sizing:border-box;resize:vertical}
+.defensa-impresa{display:none}
+@media print{
+  .defensa .defensa-edicion{display:none}
+  .defensa-impresa{display:block;break-inside:avoid;overflow-wrap:anywhere}
+  .defensa-impresa p{white-space:pre-wrap}
+}

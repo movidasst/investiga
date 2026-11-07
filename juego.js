@@ -16,8 +16,8 @@ const indicaciones = [
     'Primero elige una diligencia y lee qué aportaría. Después selecciona las medidas que incluirías. Para cada una, elige el hallazgo que aborda y cómo verificarías su aplicación.',
     'Puedes continuar cuando hayas elegido una diligencia, incluido al menos una medida y completado su sustento.'],
   ['Revisa el resultado de tu investigación y prepárate para explicarlo.',
-    'Recorre tu árbol y tu plan preventivo. Usa la pregunta final para preparar la discusión en clase.',
-    'La misión termina aquí. Puedes imprimir tu ficha o abrir otro expediente.']
+    'Revisa el árbol y el plan. Escribe una frase sobre lo que puedes afirmar, otra sobre lo que falta verificar y otra sobre la medida que priorizas.',
+    'Completa las tres frases para imprimir tu ficha y llevarla al debate en clase.']
 ];
 
 const pistas = [
@@ -38,7 +38,7 @@ function guardar() {
 }
 
 function nuevoAvance() {
-  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {}, sustentoMedidas: {} };
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {}, sustentoMedidas: {}, defensa: {} };
 }
 
 function retosResueltos() {
@@ -252,15 +252,37 @@ function medidas() {
     ${avance.medidas.includes(i) ? (pertinente === false ? `<p class="devolucion">${verificacion} Retírala si tu plan busca abordar únicamente hallazgos específicos.</p>` : sustentoMedida(i)) : ''}</article>`).join('')}</div>`;
 }
 
+const preguntasDefensa = [
+  ['afirmacion', '¿Qué puedo afirmar?', 'Menciona un hecho o vínculo y la evidencia que lo respalda.'],
+  ['pendiente', '¿Qué queda por verificar?', 'Indica qué dato falta y, si puedes, cómo lo buscarías.'],
+  ['prioridad', '¿Qué medida priorizo?', 'Elige una medida de tu plan y explica qué hallazgo aborda.']
+];
+
+function defensaFinal() {
+  return `<section class="tarjeta bloque defensa" aria-labelledby="titulo-defensa">
+    <h2 id="titulo-defensa">Defensa final</h2>
+    <p class="defensa-edicion">Escribe una frase por pregunta. El borrador se guarda en este navegador.</p>
+    ${preguntasDefensa.map(([clave, titulo, ayuda]) => `<div>
+      <label class="defensa-edicion" for="defensa-${clave}"><strong>${titulo}</strong></label>
+      <small class="defensa-edicion" id="ayuda-${clave}">${ayuda}</small>
+      <textarea class="defensa-edicion" id="defensa-${clave}" aria-describedby="ayuda-${clave}" data-defensa="${clave}" rows="2" maxlength="400">${escapar(avance.defensa[clave])}</textarea>
+      <div class="defensa-impresa"><strong>${titulo}</strong>
+        <p data-defensa-impresa="${clave}">${escapar(avance.defensa[clave]?.trim() || 'Pendiente de completar.')}</p></div>
+    </div>`).join('')}
+    <p class="devolucion defensa-edicion" data-aviso-defensa role="status"></p>
+  </section>`;
+}
+
 function cierre() {
   const pregunta = id === 'silo'
     ? '¿Qué dato pedirías para aclarar la posición del conductor en el momento del contacto?'
     : '¿Qué evidencia adicional permitiría confirmar si el aislamiento se ejecutó y se verificó?';
-  return `<p class="nota"><strong>Expediente completado.</strong> ${caso.cierre}</p>
+  return `<p class="nota"><strong>Análisis del caso.</strong> ${caso.cierre}</p>
     ${insigniaObtenida() ? `<p class="insignia">★ Insignia obtenida · ${caso.mision.insignia}</p>` : '<p class="nota">Para obtener la insignia, comprueba el árbol, selecciona la diligencia mejor sustentada y revisa el hallazgo y la verificación de cada medida incluida.</p>'}
     ${avance.decision !== null ? `<p><strong>Decisión de campo.</strong> ${caso.mision.opciones[avance.decision][0]}. ${caso.mision.opciones[avance.decision][1]}</p>` : ''}
     <h2>Tu árbol de causas</h2>${arbolVisual()}
     <h2>Plan preventivo</h2><ul>${avance.medidas.map(i => `<li><strong>${caso.medidas[i][0]}</strong>. ${medidaSustentada(i) ? `Hallazgo: ${caso.medidas[i][1]}. Verificación: ${caso.medidas[i][2]}` : 'Sustento pendiente de revisar.'}</li>`).join('')}</ul>
+    ${defensaFinal()}
     <p class="nota"><strong>Para debatir en clase.</strong> ${pregunta}</p>
     ${caso.fuente ? `<p><a href="${caso.fuente}" target="_blank" rel="noopener">Ver la figura 7 y la investigación original de ORP 2019 ↗</a></p>` : ''}
     <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div><details class="reinicio"><summary>Volver a jugar este expediente</summary><p>Se borrará el avance guardado de este caso.</p><button class="secundario" data-reiniciar>Reiniciar expediente</button></details>`;
@@ -345,7 +367,13 @@ app.addEventListener('click', evento => {
   }
   if ('ampliar' in datos) return app.querySelector('.visor').showModal();
   if ('cerrarVisor' in datos) return app.querySelector('.visor').close();
-  if ('imprimir' in datos) return window.print();
+  if ('imprimir' in datos) {
+    const pendiente = preguntasDefensa.find(([clave]) => !avance.defensa[clave]?.trim());
+    const aviso = app.querySelector('[data-aviso-defensa]');
+    aviso.textContent = pendiente ? 'Completa las tres frases de tu defensa antes de imprimir.' : '';
+    if (pendiente) return app.querySelector(`[data-defensa="${pendiente[0]}"]`).focus();
+    return window.print();
+  }
   if ('atras' in datos) return ir(avance.paso - 1);
   if ('siguiente' in datos) {
     mensaje = bloqueo();
@@ -382,6 +410,16 @@ app.addEventListener('click', evento => {
   guardar();
   pintar();
   app.querySelector(selector)?.focus();
+});
+
+app.addEventListener('input', evento => {
+  const clave = evento.target.dataset.defensa;
+  if (!clave) return;
+  avance.defensa[clave] = evento.target.value;
+  guardar();
+  app.querySelector(`[data-defensa-impresa="${clave}"]`).textContent =
+    evento.target.value.trim() || 'Pendiente de completar.';
+  app.querySelector('[data-aviso-defensa]').textContent = '';
 });
 
 app.addEventListener('change', evento => {
