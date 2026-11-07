@@ -99,7 +99,7 @@ function portada() {
     <p class="subtitulo">Juego serio de investigación de accidentes de trabajo</p><p>Explora la escena, contrasta las evidencias y reconstruye el accidente con el Método del Árbol de Causas.</p>
     <p><strong>Cómo empezar.</strong> Elige un caso. Si es tu primera partida, empieza por «La banda en movimiento». Cada misión te indica qué hacer y cuándo avanzar. Tu progreso se guarda en este navegador.</p>
     <a class="boton" href="#expedientes">Explorar expedientes ↓</a></div>
-    <img src="${casos.banda.imagen}" alt="${casos.banda.alt}"></section>
+    <img src="assets/portada-investigacion.webp" alt="Mesa de investigación con un expediente, una lupa y un casco"></section>
     <section id="expedientes"><p class="eyebrow">SELECCIÓN DE CASOS</p><h2>Tu próxima investigación</h2>
     <div class="casos">${Object.entries(casos).map(([clave, datos]) => `
       <article class="tarjeta caso"><img src="${datos.imagen}" alt="${datos.alt}">
