@@ -158,18 +158,44 @@ function lineaTiempo(editable = false) {
   </details>`;
 }
 
+const capasCroquis = {
+  choque: ['Choque observado', 'El conductor B observó por el retrovisor el choque entre los dos camiones. El círculo indica una zona ilustrativa del choque, con base en el testimonio.', '<circle cx="447" cy="166" r="29" fill="#fff3ca" stroke="#854b14" stroke-width="4"/><text x="447" y="174" text-anchor="middle">1</text>'],
+  hallazgo: ['Hallazgo posterior', 'El conductor B encontró al trabajador en el suelo después del choque. El marcador representa el hallazgo de manera esquemática.', '<circle cx="392" cy="263" r="25" fill="#d5f5e8" stroke="#00646a" stroke-width="4"/><text x="392" y="271" text-anchor="middle">2</text>'],
+  trayectoria: ['Trayectoria por reconstruir', 'La línea discontinua señala el tramo a investigar. El relato describe que el camión A giró y siguió hacia el talud. Quedan pendientes el recorrido exacto y la ubicación del contacto con el trabajador.', '<path d="M372 198q62-24 72 12t-47 102" fill="none" stroke="#23465e" stroke-width="5" stroke-dasharray="10 8"/><circle cx="397" cy="312" r="16" fill="#fff" stroke="#23465e" stroke-width="3"/><text x="397" y="320" text-anchor="middle">?</text>']
+};
+
+function croquisSilo() {
+  const capa = capasCroquis[avance.croquis];
+  return `<figure class="croquis-silo">
+    <svg viewBox="0 0 640 416" role="img" aria-label="Croquis esquemático. ${capa[0]}">
+      <image href="assets/silo-croquis.svg" width="640" height="416"/>
+      <g fill="#16384a" font-family="system-ui,sans-serif" font-size="24" font-weight="800">${capa[2]}</g>
+    </svg>
+    <figcaption><p class="eyebrow">CROQUIS DIDÁCTICO · SIN ESCALA</p>
+      <div class="puntos" role="group" aria-label="Capas del croquis">${Object.entries(capasCroquis).map(([clave, [titulo]]) =>
+        `<button type="button" class="secundario" data-croquis="${clave}" aria-pressed="${avance.croquis === clave}">${titulo}</button>`).join('')}</div>
+      <p>${capa[1]} El punto exacto del atropello queda por determinar.</p>
+    </figcaption>
+  </figure>`;
+}
+
 function escena() {
   const evidencia = caso.evidencias[avance.evidencia];
   const escenas = [{ titulo: 'Vista general', alt: caso.alt, imagen: caso.imagen, lectura: 'Abre los puntos de investigación para descubrir las escenas del expediente.' },
     ...caso.escenas.map(e => ({ ...e, imagen: 'assets/' + e.archivo + '.webp' }))];
   const seleccionada = avance.escena ?? 0;
   const vista = escenas[seleccionada];
+  const mostrandoCroquis = id === 'silo' && Object.hasOwn(capasCroquis, avance.croquis);
   return `<p>${caso.intro}</p><div class="escena"><div class="galeria">
-    <figure><button type="button" class="ampliar-escena" data-ampliar aria-label="Ampliar ${vista.titulo}"><img src="${vista.imagen}" alt="${vista.alt}"><span>⤢ Ampliar</span></button>
-    <figcaption><p class="eyebrow">RECREACIÓN DIDÁCTICA</p><strong>${vista.titulo}</strong><p>${vista.lectura}</p></figcaption></figure>
+    ${id === 'silo' ? `<div class="puntos vistas-silo" role="group" aria-label="Comparar perspectivas">
+      <button type="button" class="secundario" data-croquis="choque" data-perspectiva="croquis" aria-pressed="${mostrandoCroquis}">Croquis desde arriba</button>
+      <button type="button" class="secundario" data-evidencia="1" data-perspectiva="retrovisor" aria-pressed="${!mostrandoCroquis && seleccionada === 2}">Vista del retrovisor</button>
+    </div>` : ''}
+    ${mostrandoCroquis ? croquisSilo() : `<figure><button type="button" class="ampliar-escena" data-ampliar aria-label="Ampliar ${vista.titulo}"><img src="${vista.imagen}" alt="${vista.alt}"><span>⤢ Ampliar</span></button>
+    <figcaption><p class="eyebrow">RECREACIÓN DIDÁCTICA</p><strong>${vista.titulo}</strong><p>${vista.lectura}</p></figcaption></figure>`}
     <div class="puntos" role="group" aria-label="Escenas del expediente">${escenas.map((e, i) => {
       const disponible = i === 0 || avance.vistas.includes(e.evidencia);
-      return `<button type="button" class="secundario" data-escena="${i}" aria-pressed="${i === seleccionada}" ${disponible ? '' : 'disabled'}>${i === 0 ? 'Vista general' : 'Escena ' + i}${disponible ? '' : ' · Por abrir'}</button>`;
+      return `<button type="button" class="secundario" data-escena="${i}" aria-pressed="${!mostrandoCroquis && i === seleccionada}" ${disponible ? '' : 'disabled'}>${i === 0 ? 'Vista general' : 'Escena ' + i}${disponible ? '' : ' · Por abrir'}</button>`;
     }).join('')}</div>
     <dialog class="visor"><button type="button" data-cerrar-visor>Cerrar ×</button><img src="${vista.imagen}" alt="${vista.alt}"><p>${vista.titulo}</p></dialog></div>
     <div class="panel-evidencia"><p class="eyebrow">PUNTOS DE INVESTIGACIÓN</p><p>Consulta las evidencias para desbloquear las escenas.</p>
@@ -438,7 +464,10 @@ app.addEventListener('click', evento => {
     }
     return;
   }
-  if ('evidencia' in datos) {
+  if ('croquis' in datos) {
+    avance.croquis = datos.croquis;
+  } else if ('evidencia' in datos) {
+    avance.croquis = null;
     const indice = Number(datos.evidencia);
     avance.evidencia = indice;
     avance.escena = caso.escenas.findIndex(e => e.evidencia === indice) + 1;
@@ -446,6 +475,7 @@ app.addEventListener('click', evento => {
   } else if ('observacion' in datos) {
     avance.observaciones[avance.evidencia] = Number(datos.observacion);
   } else if ('escena' in datos) {
+    avance.croquis = null;
     avance.escena = Number(datos.escena);
     if (avance.escena > 0) avance.evidencia = caso.escenas[avance.escena - 1].evidencia;
   } else if (datos.hecho) {

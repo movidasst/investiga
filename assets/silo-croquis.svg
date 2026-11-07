@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 416" role="img" aria-labelledby="titulo">
+<title id="titulo">Croquis esquemático de la plaza de carga del silo 6</title>
+<defs>
+  <pattern id="grava" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="5" cy="7" r="1.2" fill="#d9caa9"/><circle cx="17" cy="17" r="1" fill="#d9caa9"/></pattern>
+  <pattern id="talud" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M-2 12 12-2M4 16 16 4" stroke="#567b6d" stroke-width="2"/></pattern>
+  <g id="camion"><rect x="0" y="0" width="94" height="41" rx="7" fill="currentColor" stroke="#16384a" stroke-width="3"/><path d="M65 2v37m12-30h10v23H77zM8 7h49v27H8z" fill="none" stroke="#16384a" stroke-width="2"/><path d="M12 0v-4m37 4v-4m33 4v-4M12 41v4m37-4v4m33-4v4" stroke="#16384a" stroke-width="8"/></g>
+</defs>
+<rect width="640" height="416" fill="#f5ecd7"/>
+<rect width="640" height="416" fill="url(#grava)"/>
+<path d="M0 316Q167 246 349 287T640 221V326Q451 388 340 356T0 388Z" fill="#e6d7b5"/>
+<path d="M0 388Q194 319 340 356T640 326V416H0Z" fill="#c0d9c4"/>
+<path d="M0 388Q194 319 340 356T640 326" fill="none" stroke="#375e53" stroke-width="4"/>
+<path d="M20 391Q190 337 340 371T622 347V416H20Z" fill="url(#talud)" opacity=".55"/>
+<g stroke="#244b59" stroke-width="3">
+  <rect x="31" y="29" width="205" height="143" rx="12" fill="#c3dfd7"/>
+  <circle cx="102" cy="99" r="47" fill="#eaf7ef"/>
+  <path d="M58 99h88m-44-44v88" stroke="#92b5aa" stroke-width="2"/>
+  <rect x="170" y="49" width="54" height="101" rx="5" fill="#f1c97a"/>
+  <path d="M177 63h40m-40 13h40m-40 13h40m-40 13h40m-40 13h40m-40 13h40" stroke-width="1.5"/>
+</g>
+<g font-family="system-ui,sans-serif" font-weight="700" fill="#16384a">
+  <text x="102" y="106" text-anchor="middle" font-size="19">Silo 6</text>
+  <text x="32" y="198" font-size="19">Plataforma de carga</text>
+  <text x="503" y="392" font-size="22">Talud</text>
+  <text x="35" y="288" font-size="18">Pendiente</text>
+</g>
+<path d="M126 267l28 24m-14-2 14 2-2-14" fill="none" stroke="#244b59" stroke-width="3" stroke-linecap="round"/>
+<use href="#camion" x="275" y="175" color="#f3bd67"/>
+<use href="#camion" x="475" y="120" color="#8dc9bc"/>
+<g font-family="system-ui,sans-serif" font-size="19" font-weight="700" fill="#16384a">
+  <text x="275" y="155">Camión A</text><text x="475" y="103">Camión B</text>
+</g>
+</svg>
