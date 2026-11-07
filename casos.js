@@ -100,3 +100,45 @@ casos.silo.escenas = [
   { archivo: 'silo-espejo', evidencia: 1, titulo: '02 · Por el retrovisor del camión B', alt: 'Vista desde la cabina con un retrovisor que refleja el choque entre los camiones', lectura: 'El conductor B relató haber visto el choque por el retrovisor. Esta vista ilustra su campo visual aproximado y deja abierto el momento exacto del atropello.' },
   { archivo: 'silo-hallazgo', evidencia: 2, titulo: '03 · El hallazgo en la plaza', alt: 'Trabajador tendido en el suelo y otro conductor acercándose en la plaza de carga', lectura: 'El relato indica que el conductor B encontró al trabajador en el suelo. La posición en esta imagen es ilustrativa y no establece el punto de contacto.' }
 ];
+
+casos.banda.observaciones = {
+  1: {
+    pregunta: '¿Qué puedes afirmar al comparar la escena con el registro E03?',
+    correcta: 1,
+    opciones: [
+      ['El técnico abrió el resguardo a las 08:58.', 'A esa hora se observa el resguardo abierto. El registro no identifica quién lo abrió ni cuándo.'],
+      ['A las 08:58 el resguardo estaba abierto y a las 09:00 la mano contactó el rodillo en movimiento.', 'E03 documenta ambas observaciones y sus horas. La recreación te ayuda a ubicar el rodillo.'],
+      ['La imagen confirma que el aislamiento se verificó.', 'La recreación muestra el entorno. Para confirmar la verificación del aislamiento necesitarías otra fuente.']
+    ]
+  },
+  2: {
+    pregunta: '¿Qué dato puedes registrar a partir del parte E04?',
+    correcta: 2,
+    opciones: [
+      ['El atrapamiento ocurrió a las 09:05.', 'Las 09:05 corresponden a la primera atención. Para la hora del contacto consulta E03.'],
+      ['El técnico llevaba el vendaje antes del contacto.', 'El vendaje forma parte de la recreación de la atención inicial. El parte no establece esa condición previa.'],
+      ['Se registró una lesión de mano y la primera atención fue a las 09:05.', 'Es el alcance del parte. Para reconstruir el contacto debes contrastarlo con el video E03.']
+    ]
+  }
+};
+
+casos.silo.observaciones = {
+  1: {
+    pregunta: '¿Qué vio el conductor B en el retrovisor, según su testimonio?',
+    correcta: 0,
+    opciones: [
+      ['El choque entre los camiones.', 'El choque fue observado por el retrovisor. Encontrar al trabajador en el suelo fue una observación posterior.'],
+      ['El momento en que el camión atropelló al trabajador.', 'El testimonio describe el choque y el hallazgo posterior. Deja sin aclarar el momento del atropello.'],
+      ['El punto exacto donde cayó el trabajador.', 'La ubicación del hallazgo no describe qué se vio en el espejo ni fija el punto de contacto.']
+    ]
+  },
+  2: {
+    pregunta: '¿Qué permite afirmar la escena del hallazgo al contrastarla con el relato?',
+    correcta: 1,
+    opciones: [
+      ['El trabajador fue atropellado exactamente donde aparece en la ilustración.', 'La posición dibujada es ilustrativa. Para ubicar el contacto necesitarías información adicional sobre la trayectoria y la posición del trabajador.'],
+      ['El conductor B encontró al trabajador en el suelo. El punto exacto de contacto sigue pendiente.', 'Separaste el hallazgo reportado de lo que todavía hay que reconstruir.'],
+      ['El giro del camión demuestra que el choque causó el atropello.', 'El relato describe el giro. Para conectar el choque con el atropello hace falta sustentar cómo se produjo el contacto.']
+    ]
+  }
+};

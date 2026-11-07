@@ -4,8 +4,8 @@ const pasos = ['Escena', 'Hechos', 'Árbol', 'Medidas', 'Cierre'];
 const misiones = ['Inspecciona la escena', 'Clasifica los hallazgos', 'Reconstruye el accidente', 'Decide cómo seguir', 'Defiende tu investigación'];
 const indicaciones = [
   ['Reúne la información del caso.',
-    'Toca cada punto de investigación y lee su ficha. Algunos abren una escena que puedes ampliar. Distingue lo que documenta la ficha de lo que la ilustración recrea.',
-    'Puedes continuar cuando las cuatro evidencias estén marcadas como revisadas.'],
+    'Toca cada punto de investigación y lee su ficha. Algunos abren una escena que puedes ampliar. En los puntos marcados «Reto», responde usando la ficha y la escena. Distingue lo que documenta la fuente de lo que la ilustración recrea.',
+    'Puedes continuar cuando hayas revisado las cuatro fichas y resuelto los dos retos de observación.'],
   ['Decide qué puedes afirmar con la información disponible.',
     'Abre «Consultar evidencia» y clasifica cada afirmación. Elige «Hecho respaldado» si la fuente la sostiene, «Hipótesis pendiente» si hace falta comprobarla o «Juicio de valor» si atribuye una intención o califica a alguien sin sustento.',
     'Puedes continuar cuando todas las afirmaciones estén clasificadas correctamente. Si hace falta, revisa la devolución y cambia tu respuesta.'],
@@ -38,7 +38,11 @@ function guardar() {
 }
 
 function nuevoAvance() {
-  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null };
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {} };
+}
+
+function retosResueltos() {
+  return Object.entries(caso.observaciones).filter(([indice, reto]) => avance.observaciones[indice] === reto.correcta).length;
 }
 
 function puntaje() {
@@ -46,7 +50,7 @@ function puntaje() {
   const medidasValidas = avance.medidas.filter(i => id !== 'banda' || i !== 2).length;
   const totalMedidas = id === 'banda' ? 2 : caso.medidas.length;
   return [
-    ['Evidencias', Math.round(20 * avance.vistas.length / caso.evidencias.length), 20],
+    ['Evidencias', Math.round(12 * avance.vistas.length / caso.evidencias.length + 8 * retosResueltos() / Object.keys(caso.observaciones).length), 20],
     ['Hechos', Math.round(25 * aciertos / caso.hechos.length), 25],
     ['Árbol', Math.round(30 * Object.keys(avance.relaciones).length / caso.relaciones.length), 30],
     ['Decisión', avance.decision === 0 ? 15 : 0, 15],
@@ -98,6 +102,21 @@ function nombre(codigo) {
   return caso.hechos.find(([clave]) => clave === codigo)[1];
 }
 
+function retoObservacion() {
+  const indice = avance.evidencia;
+  const reto = caso.observaciones[indice];
+  if (!reto) return '';
+  const respuesta = avance.observaciones[indice];
+  return `<article class="nota observacion">
+    <p class="eyebrow">RETO DE OBSERVACIÓN</p>
+    <h3 id="pregunta-observacion">${reto.pregunta}</h3>
+    <div class="opciones" role="group" aria-labelledby="pregunta-observacion">${reto.opciones.map(([opcion], i) =>
+      `<button type="button" class="secundario" data-observacion="${i}" aria-pressed="${i === respuesta}">${opcion}</button>`).join('')}</div>
+    <p class="devolucion" role="status">${respuesta === undefined ? '' :
+      (respuesta === reto.correcta ? 'Reto resuelto. ' : 'Revisa la fuente y vuelve a intentarlo. ') + reto.opciones[respuesta][1]}</p>
+  </article>`;
+}
+
 function escena() {
   const evidencia = caso.evidencias[avance.evidencia];
   const escenas = [{ titulo: 'Vista general', alt: caso.alt, imagen: caso.imagen, lectura: 'Abre los puntos de investigación para descubrir las escenas del expediente.' },
@@ -113,9 +132,10 @@ function escena() {
     }).join('')}</div>
     <dialog class="visor"><button type="button" data-cerrar-visor>Cerrar ×</button><img src="${vista.imagen}" alt="${vista.alt}"><p>${vista.titulo}</p></dialog></div>
     <div class="panel-evidencia"><p class="eyebrow">PUNTOS DE INVESTIGACIÓN</p><p>Consulta las evidencias para desbloquear las escenas.</p>
-    <div class="puntos">${caso.evidencias.map((e, i) => `<button class="secundario" data-evidencia="${i}" aria-pressed="${i === avance.evidencia}">${i+1}. ${e.titulo}${avance.vistas.includes(i) ? ' ✓' : ''}</button>`).join('')}</div>
+    <div class="puntos">${caso.evidencias.map((e, i) => `<button class="secundario" data-evidencia="${i}" aria-pressed="${i === avance.evidencia}">${i+1}. ${e.titulo}${avance.vistas.includes(i) ? ' ✓' : ''}${caso.observaciones[i] ? ' · Reto' : ''}</button>`).join('')}</div>
     <article class="nota" aria-live="polite"><p class="eyebrow">${evidencia.tipo}</p><h3>${evidencia.titulo}</h3><p>${evidencia.texto}</p></article>
-    <small>${avance.vistas.length} de ${caso.evidencias.length} evidencias examinadas</small></div></div>
+    ${retoObservacion()}
+    <small>${avance.vistas.length} de ${caso.evidencias.length} fichas revisadas · ${retosResueltos()} de ${Object.keys(caso.observaciones).length} retos resueltos</small></div></div>
     <p class="origen">${caso.origen} Las ilustraciones recrean el entorno con fines didácticos.</p>`;
 }
 
@@ -236,7 +256,9 @@ function ir(paso) {
 
 function bloqueo() {
   switch (avance.paso) {
-    case 0: return avance.vistas.length < caso.evidencias.length ? 'Examina todos los puntos de investigación para continuar.' : '';
+    case 0:
+      if (avance.vistas.length < caso.evidencias.length) return 'Abre los puntos de investigación que faltan.';
+      return retosResueltos() < Object.keys(caso.observaciones).length ? 'Resuelve los retos pendientes. Busca «Reto de observación» en los puntos de investigación.' : '';
     case 1: return caso.hechos.some(([clave, , correcta]) => avance.hechos[clave] !== correcta) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
     case 2: return caso.relaciones.some(r => !avance.relaciones[r.destino]) ? 'Comprueba todas las relaciones del árbol.' : '';
     case 3:
@@ -272,6 +294,8 @@ app.addEventListener('click', evento => {
     avance.evidencia = indice;
     avance.escena = caso.escenas.findIndex(e => e.evidencia === indice) + 1;
     if (!avance.vistas.includes(indice)) avance.vistas.push(indice);
+  } else if ('observacion' in datos) {
+    avance.observaciones[avance.evidencia] = Number(datos.observacion);
   } else if ('escena' in datos) {
     avance.escena = Number(datos.escena);
     if (avance.escena > 0) avance.evidencia = caso.escenas[avance.escena - 1].evidencia;
