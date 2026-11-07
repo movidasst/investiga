@@ -20,7 +20,7 @@ function guardar() {
 }
 
 function nuevoAvance() {
-  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null };
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null };
 }
 
 function puntaje() {
@@ -81,8 +81,19 @@ function nombre(codigo) {
 
 function escena() {
   const evidencia = caso.evidencias[avance.evidencia];
-  return `<p>${caso.intro}</p><div class="escena"><img src="${caso.imagen}" alt="${caso.alt}">
-    <div class="panel-evidencia"><p class="eyebrow">PUNTOS DE INVESTIGACIÓN</p>
+  const escenas = [{ titulo: 'Vista general', alt: caso.alt, imagen: caso.imagen, lectura: 'Abre los puntos de investigación para descubrir las escenas del expediente.' },
+    ...caso.escenas.map(e => ({ ...e, imagen: 'assets/' + e.archivo + '.webp' }))];
+  const seleccionada = avance.escena ?? 0;
+  const vista = escenas[seleccionada];
+  return `<p>${caso.intro}</p><div class="escena"><div class="galeria">
+    <figure><button type="button" class="ampliar-escena" data-ampliar aria-label="Ampliar ${vista.titulo}"><img src="${vista.imagen}" alt="${vista.alt}"><span>⤢ Ampliar</span></button>
+    <figcaption><p class="eyebrow">RECREACIÓN DIDÁCTICA</p><strong>${vista.titulo}</strong><p>${vista.lectura}</p></figcaption></figure>
+    <div class="puntos" role="group" aria-label="Escenas del expediente">${escenas.map((e, i) => {
+      const disponible = i === 0 || avance.vistas.includes(e.evidencia);
+      return `<button type="button" class="secundario" data-escena="${i}" aria-pressed="${i === seleccionada}" ${disponible ? '' : 'disabled'}>${i === 0 ? 'Vista general' : 'Escena ' + i}${disponible ? '' : ' · Por abrir'}</button>`;
+    }).join('')}</div>
+    <dialog class="visor"><button type="button" data-cerrar-visor>Cerrar ×</button><img src="${vista.imagen}" alt="${vista.alt}"><p>${vista.titulo}</p></dialog></div>
+    <div class="panel-evidencia"><p class="eyebrow">PUNTOS DE INVESTIGACIÓN</p><p>Consulta las evidencias para desbloquear las escenas.</p>
     <div class="puntos">${caso.evidencias.map((e, i) => `<button class="secundario" data-evidencia="${i}" aria-pressed="${i === avance.evidencia}">${i+1}. ${e.titulo}${avance.vistas.includes(i) ? ' ✓' : ''}</button>`).join('')}</div>
     <article class="nota" aria-live="polite"><p class="eyebrow">${evidencia.tipo}</p><h3>${evidencia.titulo}</h3><p>${evidencia.texto}</p></article>
     <small>${avance.vistas.length} de ${caso.evidencias.length} evidencias examinadas</small></div></div>
@@ -207,6 +218,8 @@ app.addEventListener('click', evento => {
     avance.vistas.push(0);
     return ir(0);
   }
+  if ('ampliar' in datos) return app.querySelector('.visor').showModal();
+  if ('cerrarVisor' in datos) return app.querySelector('.visor').close();
   if ('imprimir' in datos) return window.print();
   if ('atras' in datos) return ir(avance.paso - 1);
   if ('siguiente' in datos) {
@@ -218,7 +231,11 @@ app.addEventListener('click', evento => {
   if ('evidencia' in datos) {
     const indice = Number(datos.evidencia);
     avance.evidencia = indice;
+    avance.escena = caso.escenas.findIndex(e => e.evidencia === indice) + 1;
     if (!avance.vistas.includes(indice)) avance.vistas.push(indice);
+  } else if ('escena' in datos) {
+    avance.escena = Number(datos.escena);
+    if (avance.escena > 0) avance.evidencia = caso.escenas[avance.escena - 1].evidencia;
   } else if (datos.hecho) {
     if (avance.hechos[datos.hecho] !== datos.valor) avance.relaciones = {};
     avance.hechos[datos.hecho] = datos.valor;

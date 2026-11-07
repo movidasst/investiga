@@ -75,3 +75,15 @@ footer{padding:1rem;text-align:center;font-size:.85rem;color:#405971;border-top:
 .insignia{display:inline-block;border-radius:2rem;background:var(--crema);padding:.5rem .85rem;font-weight:750}
 .reinicio{margin-top:1rem}
 @media print{.reinicio,.pista{display:none}}
+.galeria{min-width:0}
+.galeria figure{margin:0 0 .65rem;background:white;border:1px solid var(--borde);border-radius:1rem;overflow:hidden}
+.galeria figcaption{padding:.8rem 1rem}
+.galeria figcaption p:last-child{margin-bottom:0}
+.galeria .ampliar-escena{display:block;position:relative;width:100%;padding:0;border:0;border-radius:0;background:var(--menta)}
+.ampliar-escena img{border-radius:0;object-fit:contain}
+.ampliar-escena span{position:absolute;bottom:.65rem;right:.65rem;background:var(--oscuro);border-radius:.5rem;padding:.3rem .55rem}
+.galeria button:disabled{color:#536574;background:#edf2f2;border-color:var(--borde);cursor:default}
+.visor{width:min(92vw,1100px);max-width:none;border:1px solid var(--borde);border-radius:1rem;padding:.8rem;color:var(--tinta);background:white}
+.visor::backdrop{background:#142c47cf}
+.visor img{aspect-ratio:auto;max-height:72vh;object-fit:contain;margin-top:.6rem}
+.visor p{margin:.6rem 0 0}

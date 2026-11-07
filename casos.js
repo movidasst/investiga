@@ -88,3 +88,15 @@ casos.silo.mision = {
   ],
   insignia: 'Guardián de la evidencia'
 };
+
+casos.banda.escenas = [
+  { archivo: 'banda-guardia', evidencia: 0, titulo: '01 · Intervención en el transportador', alt: 'Técnico junto a la banda y el resguardo del rodillo abierto', lectura: 'Ubica el resguardo y el rodillo. La escena recrea la intervención. El PLC aporta el intervalo de accionamiento del motor.' },
+  { archivo: 'banda-video', evidencia: 1, titulo: '02 · Vista del área del rodillo', alt: 'Vista elevada del resguardo abierto y la mano del técnico próxima al rodillo', lectura: 'El fotograma es una recreación del punto de vista. Consulta el registro E03 para saber qué se observó a las 08:58 y a las 09:00.' },
+  { archivo: 'banda-atencion', evidencia: 2, titulo: '03 · Atención inicial', alt: 'Un compañero presta primeros auxilios al técnico sentado, con la mano vendada', lectura: 'El parte E04 registra la lesión de mano y la primera atención a las 09:05. La ilustración representa la atención de forma didáctica.' }
+];
+
+casos.silo.escenas = [
+  { archivo: 'silo-mandos', evidencia: 0, titulo: '01 · Carga desde la plataforma', alt: 'Conductor en una plataforma de mandos y camión bajo un silo', lectura: 'Compara la ubicación de la cabina con la de los mandos. El relato sitúa al conductor fuera del camión para iniciar la carga.' },
+  { archivo: 'silo-espejo', evidencia: 1, titulo: '02 · Por el retrovisor del camión B', alt: 'Vista desde la cabina con un retrovisor que refleja el choque entre los camiones', lectura: 'El conductor B relató haber visto el choque por el retrovisor. Esta vista ilustra su campo visual aproximado y deja abierto el momento exacto del atropello.' },
+  { archivo: 'silo-hallazgo', evidencia: 2, titulo: '03 · El hallazgo en la plaza', alt: 'Trabajador tendido en el suelo y otro conductor acercándose en la plaza de carga', lectura: 'El relato indica que el conductor B encontró al trabajador en el suelo. La posición en esta imagen es ilustrativa y no establece el punto de contacto.' }
+];
