@@ -65,3 +65,13 @@ form>small{display:block;margin:.35rem 0 .7rem}
 footer{padding:1rem;text-align:center;font-size:.85rem;color:#405971;border-top:1px solid var(--borde)}
 @media(min-width:700px){.hero{grid-template-columns:1fr 1.15fr}.casos{grid-template-columns:1fr 1fr}.escena{grid-template-columns:1.15fr 1fr;align-items:start}.bloque,.panel-evidencia,.caso>div{padding:1.2rem}}
 @media print{body{background:white;font-size:10pt}.masthead,footer{padding:.3rem}button,.progreso,.navegacion{display:none!important}main{padding:0}h1{font-size:24pt}.arbol,.rama,.nota{break-inside:avoid}*{print-color-adjust:exact}}
+.subtitulo{font-size:clamp(1rem,2.5vw,1.3rem);font-weight:770;color:var(--oscuro)}
+.marcador{background:var(--menta);border:1px solid var(--borde);border-radius:1rem;padding:.8rem 1rem;margin:0 0 1.35rem}
+.marcador div{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;color:var(--oscuro)}
+.marcador progress{accent-color:var(--teal);flex:1;min-width:85px}
+.marcador ul{list-style:none;display:flex;flex-wrap:wrap;gap:.25rem .9rem;padding:0;margin:.35rem 0 0;font-size:.82rem}
+.pista,.reinicio{background:#fff5db;border:1px solid #ead9aa;border-radius:.7rem;padding:.6rem .8rem;margin:0 0 1rem}
+.reto{border-left:4px solid var(--teal)}
+.insignia{display:inline-block;border-radius:2rem;background:var(--crema);padding:.5rem .85rem;font-weight:750}
+.reinicio{margin-top:1rem}
+@media print{.reinicio,.pista{display:none}}

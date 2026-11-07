@@ -66,3 +66,25 @@ const casos = {
     cierre: 'La figura 7 conecta el desplazamiento y choque con el intento de subir al camión. El texto de la figura califica como probable el papel del choque. Compara esa formulación con la rama que dejaste abierta.'
   }
 };
+
+casos.banda.mision = {
+  titulo: 'La orden está escrita. ¿Se aplicó?',
+  dilema: 'El procedimiento exige aislar la energía. Antes de cerrar la investigación, ¿qué evidencia buscarías para comprobar si se ejecutó y verificó el aislamiento?',
+  opciones: [
+    ['Revisar el registro de aislamiento y contrastarlo con el PLC y el video', 'Puedes contrastar la hora, el equipo y la verificación registrada con el estado observado. Si el registro falta o no coincide, mantén abierta la pregunta.'],
+    ['Pedir otra copia del procedimiento', 'Obtendrías el requisito escrito. Para comprobar su ejecución necesitas evidencia de lo que ocurrió durante esta intervención.'],
+    ['Dar por aplicado el aislamiento porque estaba previsto', 'Cerrarías la investigación con un supuesto. El procedimiento por sí solo no acredita qué se hizo.']
+  ],
+  insignia: 'Rastreador de evidencias'
+};
+
+casos.silo.mision = {
+  titulo: 'Una rama abierta en el silo 6',
+  dilema: 'El testigo observó el choque por el retrovisor. ¿Qué diligencia priorizarías para aclarar si el choque influyó en el atropello?',
+  opciones: [
+    ['Reconstruir trayectorias, campo visual y posición del conductor', 'Puedes contrastar el croquis, las huellas y las declaraciones para ubicar el contacto. Si la evidencia sigue siendo insuficiente, conserva la rama abierta.'],
+    ['Entrevistar otra vez al conductor B y pedirle que confirme toda la secuencia', 'Su declaración puede precisar qué vio, desde dónde y cuándo. Su campo visual limita qué partes del contacto puede confirmar.'],
+    ['Dar por probado el vínculo porque el choque ocurrió antes', 'La proximidad temporal no basta para establecer la relación. El mecanismo del atropello quedaría sin sustento.']
+  ],
+  insignia: 'Guardián de la evidencia'
+};

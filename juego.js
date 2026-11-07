@@ -1,6 +1,13 @@
 'use strict';
 const app = document.querySelector('#app');
 const pasos = ['Escena', 'Hechos', 'Árbol', 'Medidas', 'Cierre'];
+const misiones = ['Inspecciona la escena', 'Clasifica los hallazgos', 'Reconstruye el accidente', 'Decide cómo seguir', 'Defiende tu investigación'];
+const pistas = [
+  'Abre cada punto de investigación y fíjate en el origen de cada dato.',
+  'Pregúntate si la fuente describe lo que ocurrió, lo que debía ocurrir o una interpretación.',
+  'Si un solo antecedente no basta, busca qué otro hecho tuvo que coincidir. Si la evidencia falta, considera dejar la rama abierta.',
+  'Busca una diligencia que reduzca la incertidumbre del caso y una medida cuyo efecto puedas verificar.'
+];
 const categorias = { hecho: 'Hecho respaldado', pendiente: 'Hipótesis pendiente', juicio: 'Juicio de valor' };
 const vinculos = { cadena: 'Cadena', conjuncion: 'Conjunción', pendiente: 'Rama abierta' };
 let id;
@@ -12,11 +19,37 @@ function guardar() {
   try { localStorage.setItem('expediente-mac-' + id, JSON.stringify(avance)); } catch {}
 }
 
+function nuevoAvance() {
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null };
+}
+
+function puntaje() {
+  const aciertos = caso.hechos.filter(([clave, , correcta]) => avance.hechos[clave] === correcta).length;
+  const medidasValidas = avance.medidas.filter(i => id !== 'banda' || i !== 2).length;
+  const totalMedidas = id === 'banda' ? 2 : caso.medidas.length;
+  return [
+    ['Evidencias', Math.round(20 * avance.vistas.length / caso.evidencias.length), 20],
+    ['Hechos', Math.round(25 * aciertos / caso.hechos.length), 25],
+    ['Árbol', Math.round(30 * Object.keys(avance.relaciones).length / caso.relaciones.length), 30],
+    ['Decisión', avance.decision === 0 ? 15 : 0, 15],
+    ['Prevención', Math.round(10 * medidasValidas / totalMedidas), 10]
+  ];
+}
+
+function marcador() {
+  const puntos = puntaje().reduce((suma, [, valor]) => suma + valor, 0);
+  return `<section class="marcador" aria-label="Puntuación de la investigación">
+    <div><strong>${puntos} / 100 XP</strong><progress max="100" value="${puntos}" aria-label="Experiencia del expediente">${puntos}%</progress></div>
+    <ul>${puntaje().map(([nombre, valor, maximo]) => `<li>${nombre} <strong>${valor}/${maximo}</strong></li>`).join('')}</ul>
+  </section>`;
+}
+
 function abrir(clave) {
   id = clave;
   caso = casos[clave];
-  avance = { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [] };
-  try { avance = JSON.parse(localStorage.getItem('expediente-mac-' + id)) || avance; } catch {}
+  avance = nuevoAvance();
+  try { const previo = JSON.parse(localStorage.getItem('expediente-mac-' + id));
+    if (previo) avance = { ...avance, ...previo }; } catch {}
   if (!avance.vistas.includes(avance.evidencia)) avance.vistas.push(avance.evidencia);
   ir(avance.paso);
 }
@@ -31,7 +64,7 @@ function portada() {
   mensaje = '';
   mostrar(`<section class="hero"><div><p class="eyebrow">LABORATORIO DE INVESTIGACIÓN</p>
     <h1 tabindex="-1">Expediente <em>MAC</em></h1>
-    <p>Explora la escena, contrasta las evidencias y reconstruye el accidente con el Método del Árbol de Causas.</p>
+    <p class="subtitulo">Juego serio de investigación de accidentes de trabajo</p><p>Explora la escena, contrasta las evidencias y reconstruye el accidente con el Método del Árbol de Causas.</p>
     <a class="boton" href="#expedientes">Explorar expedientes ↓</a></div>
     <img src="${casos.banda.imagen}" alt="${casos.banda.alt}"></section>
     <section id="expedientes"><p class="eyebrow">SELECCIÓN DE CASOS</p><h2>Tu próxima investigación</h2>
@@ -99,8 +132,17 @@ function arbol() {
     }).join('')}${arbolVisual()}`;
 }
 
+function decision() {
+  const orden = id === 'banda' ? [1, 0, 2] : [2, 1, 0];
+  return `<article class="tarjeta bloque reto"><p class="eyebrow">DECISIÓN DE CAMPO</p>
+    <h3>${caso.mision.titulo}</h3><p>${caso.mision.dilema}</p>
+    <div class="opciones">${orden.map(i => `<button class="secundario" data-decision="${i}" aria-pressed="${avance.decision === i}">${caso.mision.opciones[i][0]}</button>`).join('')}</div>
+    <p class="devolucion" aria-live="polite">${avance.decision === null ? '' : caso.mision.opciones[avance.decision][1]}</p>
+  </article>`;
+}
+
 function medidas() {
-  return `<p>Selecciona las acciones que incluirías en tu plan. Cada ficha indica la rama donde actuaría y cómo podrías verificarla.</p>
+  return `${decision()}<h3>Tu plan preventivo</h3><p>Selecciona las acciones que incluirías en tu plan. Cada ficha indica la rama donde actuaría y cómo podrías verificarla.</p>
     <div class="lista">${caso.medidas.map(([titulo, rama, verificacion], i) => `<article class="tarjeta bloque">
     <p class="eyebrow">${rama}</p><h3>${titulo}</h3><button class="secundario" data-medida="${i}" aria-pressed="${avance.medidas.includes(i)}">${avance.medidas.includes(i) ? 'Incluida ✓' : 'Incluir en el plan'}</button>
     <p>${verificacion}</p></article>`).join('')}</div>`;
@@ -111,11 +153,13 @@ function cierre() {
     ? '¿Qué dato pedirías para aclarar la posición del conductor en el momento del contacto?'
     : '¿Qué evidencia adicional permitiría confirmar si el aislamiento se ejecutó y se verificó?';
   return `<p class="nota"><strong>Expediente completado.</strong> ${caso.cierre}</p>
+    ${avance.decision === 0 ? `<p class="insignia">★ Insignia obtenida · ${caso.mision.insignia}</p>` : '<p class="nota">Puedes volver a la decisión de campo y contrastar otra diligencia.</p>'}
+    ${avance.decision !== null ? `<p><strong>Decisión de campo.</strong> ${caso.mision.opciones[avance.decision][0]}. ${caso.mision.opciones[avance.decision][1]}</p>` : ''}
     <h2>Tu árbol de causas</h2>${arbolVisual()}
     <h2>Plan preventivo</h2><ul>${avance.medidas.map(i => `<li><strong>${caso.medidas[i][0]}</strong>. ${caso.medidas[i][2]}</li>`).join('')}</ul>
     <p class="nota"><strong>Para debatir en clase.</strong> ${pregunta}</p>
     ${caso.fuente ? `<p><a href="${caso.fuente}" target="_blank" rel="noopener">Ver la figura 7 y la investigación original de ORP 2019 ↗</a></p>` : ''}
-    <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div>`;
+    <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div><details class="reinicio"><summary>Volver a jugar este expediente</summary><p>Se borrará el avance guardado de este caso.</p><button class="secundario" data-reiniciar>Reiniciar expediente</button></details>`;
 }
 
 function pintar() {
@@ -123,7 +167,10 @@ function pintar() {
   mostrar(`<section class="expediente"><button class="volver" data-portada>← Todos los expedientes</button>
     <p class="eyebrow">EXPEDIENTE ${caso.numero} · ${caso.nivel}</p><h1 tabindex="-1">${caso.titulo}</h1>
     <ol class="progreso" aria-label="Etapas">${pasos.map((nombrePaso, i) => `<li ${i === avance.paso ? 'aria-current="step"' : ''} class="${i < avance.paso ? 'completo' : ''}"><span>${i + 1}</span>${nombrePaso}</li>`).join('')}</ol>
-    <h2>${pasos[avance.paso]}</h2>${vistas[avance.paso]()}
+    ${marcador()}<p class="eyebrow">MISIÓN ${avance.paso + 1} DE 5</p>
+    <h2>${misiones[avance.paso]}</h2>
+    ${avance.paso < 4 ? `<details class="pista"><summary>Ver pista</summary><p>${pistas[avance.paso]}</p></details>` : ''}
+    ${vistas[avance.paso]()}
     <p class="aviso" role="status">${mensaje}</p>
     <nav class="navegacion" aria-label="Navegar el expediente">${avance.paso > 0 ? '<button class="secundario" data-atras>← Anterior</button>' : ''}
     ${avance.paso < 4 ? '<button data-siguiente>Continuar →</button>' : ''}</nav></section>`);
@@ -142,7 +189,9 @@ function bloqueo() {
     case 0: return avance.vistas.length < caso.evidencias.length ? 'Examina todos los puntos de investigación para continuar.' : '';
     case 1: return caso.hechos.some(([clave, , correcta]) => avance.hechos[clave] !== correcta) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
     case 2: return caso.relaciones.some(r => !avance.relaciones[r.destino]) ? 'Comprueba todas las relaciones del árbol.' : '';
-    case 3: return avance.medidas.length === 0 ? 'Elige al menos una medida para tu plan.' : '';
+    case 3:
+      if (avance.decision === null) return 'Elige una diligencia de investigación.';
+      return avance.medidas.length === 0 ? 'Elige al menos una medida para tu plan.' : '';
     default: return '';
   }
 }
@@ -153,6 +202,11 @@ app.addEventListener('click', evento => {
   const datos = boton.dataset;
   if (datos.abrir) return abrir(datos.abrir);
   if ('portada' in datos) { portada(); enfocarTitulo(); return; }
+  if ('reiniciar' in datos) {
+    avance = nuevoAvance();
+    avance.vistas.push(0);
+    return ir(0);
+  }
   if ('imprimir' in datos) return window.print();
   if ('atras' in datos) return ir(avance.paso - 1);
   if ('siguiente' in datos) {
@@ -166,8 +220,10 @@ app.addEventListener('click', evento => {
     avance.evidencia = indice;
     if (!avance.vistas.includes(indice)) avance.vistas.push(indice);
   } else if (datos.hecho) {
+    if (avance.hechos[datos.hecho] !== datos.valor) avance.relaciones = {};
     avance.hechos[datos.hecho] = datos.valor;
-    avance.relaciones = {};
+  } else if ('decision' in datos) {
+    avance.decision = Number(datos.decision);
   } else if ('medida' in datos) {
     const indice = Number(datos.medida);
     avance.medidas = avance.medidas.includes(indice) ? avance.medidas.filter(i => i !== indice) : [...avance.medidas, indice];
@@ -194,6 +250,7 @@ app.addEventListener('submit', evento => {
   formulario.querySelector('.devolucion').textContent = (valido ? 'Vínculo registrado. ' : 'Revisa tu conexión. ') + relacion.ayuda;
   app.querySelector('.aviso').textContent = '';
   app.querySelector('.arbol').outerHTML = arbolVisual();
+  app.querySelector('.marcador').outerHTML = marcador();
 });
 
 portada();
