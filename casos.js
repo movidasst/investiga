@@ -142,3 +142,23 @@ casos.silo.observaciones = {
     ]
   }
 };
+
+casos.banda.cronologia = {
+  posiciones: ['1 · 08:58', '2 · 09:00', '3 · 09:05', 'Momento sin confirmar'],
+  eventos: [
+    ['Primera atención registrada (E04)', 2],
+    ['Resguardo observado abierto (E03)', 0],
+    ['Verificación del aislamiento antes de intervenir', 3],
+    ['Contacto con el rodillo en movimiento (E03)', 1]
+  ]
+};
+
+casos.silo.cronologia = {
+  posiciones: ['1 · Durante la carga', '2 · Después de iniciarse el desplazamiento', '3 · En el hallazgo posterior', 'Momento sin confirmar'],
+  eventos: [
+    ['El conductor B encontró al trabajador en el suelo', 2],
+    ['Momento exacto del atropello respecto del choque', 3],
+    ['El camión A empezó a moverse', 0],
+    ['El conductor B observó el choque por el retrovisor', 1]
+  ]
+};

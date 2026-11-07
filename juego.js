@@ -29,16 +29,25 @@ const pistas = [
 const categorias = { hecho: 'Hecho respaldado', pendiente: 'Hipótesis pendiente', juicio: 'Juicio de valor' };
 const vinculos = { cadena: 'Cadena', conjuncion: 'Conjunción', pendiente: 'Rama abierta' };
 let id;
+let desafio = false;
 let caso;
 let avance;
 let mensaje = '';
 
+function clavePartida() {
+  return 'expediente-mac-' + id + (desafio ? '-desafio' : '');
+}
+
+function evaluacionDiferida() {
+  return desafio && avance.paso < 4;
+}
+
 function guardar() {
-  try { localStorage.setItem('expediente-mac-' + id, JSON.stringify(avance)); } catch {}
+  try { localStorage.setItem(clavePartida(), JSON.stringify(avance)); } catch {}
 }
 
 function nuevoAvance() {
-  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {}, sustentoMedidas: {}, defensa: {} };
+  return { paso: 0, evidencia: 0, vistas: [], hechos: {}, relaciones: {}, medidas: [], decision: null, escena: null, observaciones: {}, sustentoMedidas: {}, defensa: {}, cronologia: {}, intentosVinculo: {} };
 }
 
 function retosResueltos() {
@@ -60,7 +69,7 @@ function puntaje() {
   const medidasSustentadas = avance.medidas.filter(medidaSustentada).length;
   const totalMedidas = caso.medidas.filter(m => m[3] !== false).length;
   return [
-    ['Evidencias', Math.round(12 * avance.vistas.length / caso.evidencias.length + 8 * retosResueltos() / Object.keys(caso.observaciones).length), 20],
+    ['Evidencias', Math.round(8 * avance.vistas.length / caso.evidencias.length + 8 * retosResueltos() / Object.keys(caso.observaciones).length + caso.cronologia.eventos.filter(([, posicion], i) => avance.cronologia[i] === posicion).length), 20],
     ['Hechos', Math.round(25 * aciertos / caso.hechos.length), 25],
     ['Árbol', Math.round(30 * Object.keys(avance.relaciones).length / caso.relaciones.length), 30],
     ['Decisión', avance.decision === 0 ? 15 : 0, 15],
@@ -76,11 +85,12 @@ function marcador() {
   </section>`;
 }
 
-function abrir(clave) {
+function abrir(clave, modoDesafio = false) {
   id = clave;
+  desafio = modoDesafio;
   caso = casos[clave];
   avance = nuevoAvance();
-  try { const previo = JSON.parse(localStorage.getItem('expediente-mac-' + id));
+  try { const previo = JSON.parse(localStorage.getItem(clavePartida()));
     if (previo) avance = { ...avance, ...previo }; } catch {}
   if (!avance.vistas.includes(avance.evidencia)) avance.vistas.push(avance.evidencia);
   ir(avance.paso);
@@ -101,10 +111,11 @@ function portada() {
     <a class="boton" href="#expedientes">Explorar expedientes ↓</a></div>
     <img src="assets/portada-investigacion.webp" alt="Mesa de investigación con un expediente, una lupa y un casco"></section>
     <section id="expedientes"><p class="eyebrow">SELECCIÓN DE CASOS</p><h2>Tu próxima investigación</h2>
+    <p>En práctica guiada recibes orientación al responder. En modo desafío puedes pedir pistas y ves la corrección al llegar al cierre. Cada modo guarda su propio avance.</p>
     <div class="casos">${Object.entries(casos).map(([clave, datos]) => `
       <article class="tarjeta caso"><img src="${datos.imagen}" alt="${datos.alt}">
       <div><p class="eyebrow">EXPEDIENTE ${datos.numero} · ${datos.nivel}</p><h3>${datos.titulo}</h3><p>${datos.intro}</p>
-      <button data-abrir="${clave}">Abrir expediente <span aria-hidden="true">→</span></button></div></article>`).join('')}</div></section>`);
+      <button data-abrir="${clave}">Práctica guiada <span aria-hidden="true">→</span></button> <button class="secundario" data-abrir="${clave}" data-desafio>Modo desafío</button></div></article>`).join('')}</div></section>`);
 }
 
 function nombre(codigo) {
@@ -122,9 +133,29 @@ function retoObservacion() {
     <h3 id="pregunta-observacion">${reto.pregunta}</h3>
     <div class="opciones" role="group" aria-labelledby="pregunta-observacion">${reto.opciones.map(([opcion], i) =>
       `<button type="button" class="secundario" data-observacion="${i}" aria-pressed="${i === respuesta}">${opcion}</button>`).join('')}</div>
-    <p class="devolucion" role="status">${respuesta === undefined ? '' :
+    <p class="devolucion" role="status">${respuesta === undefined || evaluacionDiferida() ? '' :
       (respuesta === reto.correcta ? 'Reto resuelto. ' : 'Revisa la fuente y vuelve a intentarlo. ') + reto.opciones[respuesta][1]}</p>
   </article>`;
+}
+
+function cronologiaCorrecta() {
+  return caso.cronologia.eventos.every(([, posicion], i) => avance.cronologia[i] === posicion);
+}
+
+function lineaTiempo(editable = false) {
+  const { posiciones, eventos } = caso.cronologia;
+  return `<details class="tarjeta bloque" ${editable || avance.paso === 4 ? 'open' : ''}>
+    <summary>Línea de tiempo</summary>
+    ${editable ? '<p>Ubica cada hecho según las fichas. Marca «Momento sin confirmar» cuando las fuentes dejen el momento pendiente.</p>' : ''}
+    ${editable ? eventos.map(([evento, posicion], i) => `<label>${evento}
+      <select data-cronologia="${i}"><option value="">Selecciona un momento</option>
+      ${posiciones.map((texto, j) => `<option value="${j}" ${avance.cronologia[i] === j ? 'selected' : ''}>${texto}</option>`).join('')}
+      </select>${!evaluacionDiferida() && avance.cronologia[i] !== undefined ? `<small>${avance.cronologia[i] === posicion ? 'Ubicación respaldada.' : 'Vuelve a revisar la fuente.'}</small>` : ''}</label>`).join('')
+    : `<ul>${eventos.map(([evento, posicion], i) => ({ evento, posicion, elegida: avance.cronologia[i] }))
+      .sort((a, b) => (a.elegida ?? posiciones.length) - (b.elegida ?? posiciones.length))
+      .map(({evento, posicion, elegida}) => `<li><strong>${posiciones[elegida] || 'Por ubicar'}</strong> · ${evento}
+      ${desafio && avance.paso === 4 && elegida !== posicion ? `<small> · Según las fuentes: ${posiciones[posicion]}</small>` : ''}</li>`).join('')}</ul>`}
+  </details>`;
 }
 
 function escena() {
@@ -145,8 +176,8 @@ function escena() {
     <div class="puntos">${caso.evidencias.map((e, i) => `<button class="secundario" data-evidencia="${i}" aria-pressed="${i === avance.evidencia}">${i+1}. ${e.titulo}${avance.vistas.includes(i) ? ' ✓' : ''}${caso.observaciones[i] ? ' · Reto' : ''}</button>`).join('')}</div>
     <article class="nota" aria-live="polite"><p class="eyebrow">${evidencia.tipo}</p><h3>${evidencia.titulo}</h3><p>${evidencia.texto}</p></article>
     ${retoObservacion()}
-    <small>${avance.vistas.length} de ${caso.evidencias.length} fichas revisadas · ${retosResueltos()} de ${Object.keys(caso.observaciones).length} retos resueltos</small></div></div>
-    <p class="origen">${caso.origen} Las ilustraciones recrean el entorno con fines didácticos.</p>`;
+    <small>${avance.vistas.length} de ${caso.evidencias.length} fichas revisadas · ${evaluacionDiferida() ? Object.keys(avance.observaciones).length : retosResueltos()} de ${Object.keys(caso.observaciones).length} retos ${evaluacionDiferida() ? 'respondidos' : 'resueltos'}</small></div></div>
+    <p class="origen">${caso.origen} Las ilustraciones recrean el entorno con fines didácticos.</p>${lineaTiempo(true)}`;
 }
 
 function hechos() {
@@ -156,7 +187,7 @@ function hechos() {
         <details><summary>Consultar evidencia</summary><p>${caso.evidencias[indice].texto}</p></details>
         <div class="opciones" role="group" aria-label="Clasificar ${clave}">${Object.entries(categorias).map(([valor, etiqueta]) =>
           `<button class="secundario" data-hecho="${clave}" data-valor="${valor}" aria-pressed="${valor === elegida}">${etiqueta}</button>`).join('')}</div>
-        <p class="devolucion" aria-live="polite">${elegida ? (elegida === correcta ? 'Bien sustentado. ' + ayuda : 'Revisa el alcance de la evidencia. ' + ayuda) : ''}</p></article>`;
+        <p class="devolucion" aria-live="polite">${elegida && !evaluacionDiferida() ? (elegida === correcta ? 'Bien sustentado. ' + ayuda : 'Revisa el alcance de la evidencia. ' + ayuda) : ''}</p></article>`;
     }).join('')}</div>`;
 }
 
@@ -200,13 +231,13 @@ function arbolVisual() {
 }
 
 function arbol() {
-  return `${arbolVisual()}
+  return `${lineaTiempo()}${evaluacionDiferida() ? '' : arbolVisual()}
     ${[...caso.relaciones].reverse().map(r => {
-      const previa = avance.relaciones[r.destino];
+      const previa = evaluacionDiferida() ? avance.intentosVinculo[r.destino] : avance.relaciones[r.destino];
       return `<form class="tarjeta bloque" data-relacion="${r.destino}"><h3 tabindex="-1">${nombre(r.destino)}</h3>
-        <p id="devolucion-${r.destino}" class="devolucion" aria-live="polite">${previa ? 'Vínculo registrado. ' + r.ayuda : ''}</p>
+        <p id="devolucion-${r.destino}" class="devolucion" aria-live="polite">${previa ? (evaluacionDiferida() ? 'Respuesta registrada.' : 'Vínculo registrado. ' + r.ayuda) : ''}</p>
         <fieldset><legend>¿Qué tuvo que ocurrir para que se produjera este hecho?</legend>
-          ${caso.hechos.filter(([clave]) => clave !== r.destino && avance.hechos[clave] === 'hecho').map(([clave, frase]) =>
+          ${caso.hechos.filter(([clave]) => clave !== r.destino && (evaluacionDiferida() || avance.hechos[clave] === 'hecho')).map(([clave, frase]) =>
             `<label><input type="checkbox" name="origen" aria-describedby="devolucion-${r.destino}" value="${clave}" ${previa?.origen.includes(clave) ? 'checked' : ''}> ${frase}</label>`).join('')}</fieldset>
         <label>Tipo de relación <select name="tipo" aria-describedby="devolucion-${r.destino}"><option value="">Selecciona una relación</option>
         ${Object.entries(vinculos).map(([v,t]) => `<option value="${v}" ${previa?.tipo === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
@@ -216,7 +247,7 @@ function arbol() {
           <label>¿Qué falta verificar?<textarea aria-describedby="devolucion-${r.destino}" name="pendiente" maxlength="400" rows="2">${escapar(previa?.pendiente)}</textarea></label>
           <label>¿Cómo lo investigarías?<textarea aria-describedby="devolucion-${r.destino}" name="diligencia" maxlength="400" rows="2">${escapar(previa?.diligencia)}</textarea></label>
         </fieldset>
-        <button type="submit">Comprobar vínculo</button></form>`;
+        <button type="submit">${evaluacionDiferida() ? 'Registrar vínculo' : 'Comprobar vínculo'}</button></form>`;
     }).join('')}`;
 }
 
@@ -225,7 +256,7 @@ function decision() {
   return `<article class="tarjeta bloque reto"><p class="eyebrow">DECISIÓN DE CAMPO</p>
     <h3>${caso.mision.titulo}</h3><p>${caso.mision.dilema}</p>
     <div class="opciones">${orden.map(i => `<button class="secundario" data-decision="${i}" aria-pressed="${avance.decision === i}">${caso.mision.opciones[i][0]}</button>`).join('')}</div>
-    <p class="devolucion" aria-live="polite">${avance.decision === null ? '' : caso.mision.opciones[avance.decision][1]}</p>
+    <p class="devolucion" aria-live="polite">${avance.decision === null || evaluacionDiferida() ? '' : caso.mision.opciones[avance.decision][1]}</p>
   </article>`;
 }
 
@@ -239,7 +270,7 @@ function sustentoMedida(i) {
     </select></label>`;
   return `${selector('hallazgo', '¿Qué hallazgo aborda?', 1)}
     ${selector('verificacion', '¿Cómo comprobarías su aplicación?', 2)}
-    <p class="devolucion" role="status">${medidaSustentada(i) ? 'Medida sustentada.' :
+    <p class="devolucion" role="status">${evaluacionDiferida() ? '' : medidaSustentada(i) ? 'Medida sustentada.' :
       [sustento.hallazgo, sustento.verificacion].every(Number.isInteger)
         ? 'Revisa si el hallazgo y la verificación elegidos corresponden a esta medida.' : ''}</p>`;
 }
@@ -249,7 +280,7 @@ function medidas() {
     <p>Los XP de prevención se asignan a las medidas vinculadas con un hallazgo y una verificación pertinente. La insignia requiere el árbol comprobado, la diligencia mejor sustentada y todas las medidas incluidas con su sustento.</p>
     <div class="lista">${caso.medidas.map(([titulo, , verificacion, pertinente], i) => `<article class="tarjeta bloque">
     <h3>${titulo}</h3><button class="secundario" data-medida="${i}" aria-pressed="${avance.medidas.includes(i)}">${avance.medidas.includes(i) ? 'Incluida ✓' : 'Incluir en el plan'}</button>
-    ${avance.medidas.includes(i) ? (pertinente === false ? `<p class="devolucion">${verificacion} Retírala si tu plan busca abordar únicamente hallazgos específicos.</p>` : sustentoMedida(i)) : ''}</article>`).join('')}</div>`;
+    ${avance.medidas.includes(i) ? (pertinente === false ? `<p class="devolucion">${evaluacionDiferida() ? 'Medida incluida.' : verificacion + ' Retírala si tu plan busca abordar únicamente hallazgos específicos.'}</p>` : sustentoMedida(i)) : ''}</article>`).join('')}</div>`;
 }
 
 const preguntasDefensa = [
@@ -282,23 +313,42 @@ function cierre() {
     ${avance.decision !== null ? `<p><strong>Decisión de campo.</strong> ${caso.mision.opciones[avance.decision][0]}. ${caso.mision.opciones[avance.decision][1]}</p>` : ''}
     <h2>Tu árbol de causas</h2>${arbolVisual()}
     <h2>Plan preventivo</h2><ul>${avance.medidas.map(i => `<li><strong>${caso.medidas[i][0]}</strong>. ${medidaSustentada(i) ? `Hallazgo: ${caso.medidas[i][1]}. Verificación: ${caso.medidas[i][2]}` : 'Sustento pendiente de revisar.'}</li>`).join('')}</ul>
-    ${defensaFinal()}
+    ${lineaTiempo()}${desafio ? devolucionDesafio() : ''}${defensaFinal()}
     <p class="nota"><strong>Para debatir en clase.</strong> ${pregunta}</p>
     ${caso.fuente ? `<p><a href="${caso.fuente}" target="_blank" rel="noopener">Ver la figura 7 y la investigación original de ORP 2019 ↗</a></p>` : ''}
     <div class="opciones"><button data-imprimir>Imprimir ficha</button><button class="secundario" data-portada>Elegir otro caso</button></div><details class="reinicio"><summary>Volver a jugar este expediente</summary><p>Se borrará el avance guardado de este caso.</p><button class="secundario" data-reiniciar>Reiniciar expediente</button></details>`;
 }
 
+function devolucionDesafio() {
+  const list = (items) => `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+  return `<section class="tarjeta bloque"><h2>Devolución del desafío</h2>
+    <h3>Observación</h3>${list(Object.entries(caso.observaciones).map(([i, r]) =>
+      `${r.pregunta} <strong>${avance.observaciones[i] === r.correcta ? 'Acertaste.' : 'Revisa.'}</strong> ${r.opciones[r.correcta][0]} ${r.opciones[r.correcta][1]}`))}
+    <h3>Clasificación</h3>${list(caso.hechos.map(([clave, frase, correcta, ayuda]) =>
+      `${frase} <strong>${categorias[correcta]}${avance.hechos[clave] === correcta ? ' ✓' : ''}.</strong> ${ayuda}`))}
+    <h3>Árbol</h3>${list(caso.relaciones.map(r => {
+      const intento = avance.intentosVinculo[r.destino];
+      const error = intento && revisarVinculo(r, intento.origen, intento.tipo, intento.pendiente, intento.diligencia);
+      return `${nombre(r.destino)}. <strong>${avance.relaciones[r.destino] ? 'Vínculo comprobado.' : 'Vínculo por revisar.'}</strong> ${error ? error[0] + ' ' : ''}${r.ayuda}`;
+    }))}</section>`;
+}
+
 function instrucciones() {
-  const [tarea, como, avanceRequerido] = indicaciones[avance.paso];
+  const [tarea, como, criterio] = indicaciones[avance.paso];
+  const avanceRequerido = avance.paso === 0
+    ? (desafio ? 'Abre las cuatro fichas, responde los dos retos y completa la línea de tiempo.' : 'Revisa las cuatro fichas, resuelve los dos retos y ubica correctamente los hechos en la línea de tiempo.')
+    : evaluacionDiferida() && avance.paso === 1 ? 'Responde todas las afirmaciones para continuar.'
+    : evaluacionDiferida() && avance.paso === 2 ? 'Registra un intento por vínculo. La corrección aparecerá al cierre.'
+    : criterio;
   return `<aside class="instrucciones" aria-label="Indicaciones de la misión">
     <p><strong>Tu tarea.</strong> ${tarea}</p>
-    <p><strong>Cómo hacerlo.</strong> ${como}</p>
+    <p><strong>Cómo hacerlo.</strong> ${evaluacionDiferida() && avance.paso === 2 ? 'Marca los antecedentes, elige el tipo de vínculo y pulsa «Registrar vínculo». Si dejas una rama abierta, anota qué falta verificar y cómo lo investigarías.' : como}</p>
     <p><strong>${avance.paso === 4 ? 'Para cerrar.' : 'Para avanzar.'}</strong> ${avanceRequerido}</p>
   </aside>`;
 }
 
 function guiaVinculos() {
-  return `<details class="pista" ${id === 'banda' ? 'open' : ''}>
+  return `<details class="pista" ${id === 'banda' && !desafio ? 'open' : ''}>
     <summary>Cadena, conjunción y rama abierta${id === 'banda' ? ' · Ejemplo guiado' : ''}</summary>
     <dl class="guia-vinculos">
       <dt>Cadena</dt><dd>Hay un antecedente directo respaldado para el hecho que estás explicando.</dd>
@@ -314,7 +364,7 @@ function pintar() {
   mostrar(`<section class="expediente"><button class="volver" data-portada>← Todos los expedientes</button>
     <p class="eyebrow">EXPEDIENTE ${caso.numero} · ${caso.nivel}</p><h1 tabindex="-1">${caso.titulo}</h1>
     <ol class="progreso" aria-label="Etapas">${pasos.map((nombrePaso, i) => `<li ${i === avance.paso ? 'aria-current="step"' : ''} class="${i < avance.paso ? 'completo' : ''}"><span>${i + 1}</span>${nombrePaso}</li>`).join('')}</ol>
-    ${marcador()}<p class="eyebrow">MISIÓN ${avance.paso + 1} DE 5</p>
+    ${evaluacionDiferida() ? '<p class="nota">Modo desafío · La puntuación y la devolución aparecen al cierre.</p>' : marcador()}<p class="eyebrow">MISIÓN ${avance.paso + 1} DE 5</p>
     <h2>${misiones[avance.paso]}</h2>${instrucciones()}
     ${avance.paso === 2 ? guiaVinculos() : ''}
     ${avance.paso < 4 ? `<details class="pista"><summary>Ver pista</summary><p>${pistas[avance.paso]}</p></details>` : ''}
@@ -333,7 +383,7 @@ function ir(paso) {
 }
 
 function vinculoPendiente() {
-  return caso.relaciones.slice().reverse().find(r =>
+  return caso.relaciones.slice().reverse().find(r => evaluacionDiferida() ? !avance.intentosVinculo[r.destino] :
     !avance.relaciones[r.destino] || (r.tipo === 'pendiente' && !avance.relaciones[r.destino].diligencia));
 }
 
@@ -341,8 +391,10 @@ function bloqueo() {
   switch (avance.paso) {
     case 0:
       if (avance.vistas.length < caso.evidencias.length) return 'Abre los puntos de investigación que faltan.';
-      return retosResueltos() < Object.keys(caso.observaciones).length ? 'Resuelve los retos pendientes. Busca «Reto de observación» en los puntos de investigación.' : '';
-    case 1: return caso.hechos.some(([clave, , correcta]) => avance.hechos[clave] !== correcta) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
+      if ((evaluacionDiferida() ? Object.keys(avance.observaciones).length : retosResueltos()) < Object.keys(caso.observaciones).length) return 'Completa los retos de observación pendientes.';
+      if (Object.keys(avance.cronologia).length < caso.cronologia.eventos.length) return 'Completa la línea de tiempo.';
+      return !evaluacionDiferida() && !cronologiaCorrecta() ? 'Revisa las posiciones de la línea de tiempo.' : '';
+    case 1: return caso.hechos.some(([clave, , correcta]) => (evaluacionDiferida() ? !avance.hechos[clave] : avance.hechos[clave] !== correcta)) ? 'Clasifica todas las afirmaciones y revisa las devoluciones.' : '';
     case 2: return vinculoPendiente() ? 'Queda un vínculo por comprobar.' : '';
     case 3:
       if (avance.decision === null) return 'Elige una diligencia de investigación.';
@@ -358,7 +410,7 @@ app.addEventListener('click', evento => {
   const boton = evento.target.closest('button');
   if (!boton) return;
   const datos = boton.dataset;
-  if (datos.abrir) return abrir(datos.abrir);
+  if (datos.abrir) return abrir(datos.abrir, 'desafio' in datos);
   if ('portada' in datos) { portada(); enfocarTitulo(); return; }
   if ('reiniciar' in datos) {
     avance = nuevoAvance();
@@ -381,7 +433,7 @@ app.addEventListener('click', evento => {
     app.querySelector('.aviso').textContent = mensaje;
     if (avance.paso === 2) {
       const tarjeta = app.querySelector(`[data-relacion="${vinculoPendiente().destino}"]`);
-      tarjeta.querySelector('.devolucion').textContent ||= 'Revisa esta tarjeta y pulsa «Comprobar vínculo».';
+      tarjeta.querySelector('.devolucion').textContent ||= desafio ? 'Registra tu respuesta en esta tarjeta.' : 'Revisa esta tarjeta y pulsa «Comprobar vínculo».';
       tarjeta.querySelector('h3').focus();
     }
     return;
@@ -397,7 +449,7 @@ app.addEventListener('click', evento => {
     avance.escena = Number(datos.escena);
     if (avance.escena > 0) avance.evidencia = caso.escenas[avance.escena - 1].evidencia;
   } else if (datos.hecho) {
-    if (avance.hechos[datos.hecho] !== datos.valor) avance.relaciones = {};
+    if (!desafio && avance.hechos[datos.hecho] !== datos.valor) avance.relaciones = {};
     avance.hechos[datos.hecho] = datos.valor;
   } else if ('decision' in datos) {
     avance.decision = Number(datos.decision);
@@ -424,6 +476,15 @@ app.addEventListener('input', evento => {
 
 app.addEventListener('change', evento => {
   const selector = evento.target;
+  if (selector.matches('select[data-cronologia]')) {
+    const indice = selector.dataset.cronologia;
+    if (selector.value === '') delete avance.cronologia[indice];
+    else avance.cronologia[indice] = Number(selector.value);
+    guardar();
+    pintar();
+    app.querySelector(`[data-cronologia="${indice}"]`).focus();
+    return;
+  }
   if (selector.matches('select[data-sustento]')) {
     const { sustento, campo } = selector.dataset;
     const valores = avance.sustentoMedidas[sustento] ||= {};
@@ -479,9 +540,23 @@ app.addEventListener('submit', evento => {
   const pendiente = datos.get('pendiente')?.trim();
   const diligencia = datos.get('diligencia')?.trim();
   const error = revisarVinculo(relacion, origen, tipo, pendiente, diligencia);
+  if (evaluacionDiferida()) {
+    const campo = !tipo ? 'tipo' : tipo === 'pendiente' && !pendiente ? 'pendiente' : tipo === 'pendiente' && !diligencia ? 'diligencia' : '';
+    if (campo) {
+      formulario.querySelector('.devolucion').textContent = 'Completa los campos de este vínculo antes de registrarlo.';
+      formulario.querySelector(`[name="${campo}"]`).focus();
+      return;
+    }
+    avance.intentosVinculo[destino] = { tipo, origen, pendiente, diligencia };
+  }
   if (error) delete avance.relaciones[destino];
   else avance.relaciones[destino] = tipo === 'pendiente' ? { tipo, origen, pendiente, diligencia } : { tipo, origen };
   guardar();
+  if (evaluacionDiferida()) {
+    formulario.querySelector('.devolucion').textContent = 'Respuesta registrada. Recibirás la devolución al cierre.';
+    app.querySelector('.aviso').textContent = '';
+    return;
+  }
   formulario.querySelector('.devolucion').textContent = error ? error[0] : 'Vínculo registrado. ' + relacion.ayuda;
   app.querySelector('.aviso').textContent = '';
   app.querySelector('.arbol').outerHTML = arbolVisual();
